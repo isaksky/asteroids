@@ -1,17 +1,17 @@
 COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
 
-random = ( min, max ) ->
-  if ( min && typeof min.length == 'number' && !!min.length )
-    return min[ Math.floor( Math.random() * min.length ) ]
-  if ( typeof max != 'number' )
-    max = min || 1
-    min = 0
-  return min + Math.random() * (max - min)
-
-class Asteroid
-  constructor : (@points, @x, @y) ->
-    @guid = get_guid()
-    @color = random(COLORS)
+class Player
+  constructor : (@x, @y) ->
+    @guid = "player" #get_guid()
+    @points = [
+      {x: 0.75, y: 0}
+      #{x: 0.15, y: 1}
+      {x: 0, y: 0.25}
+      #{x: -0.15, y: 0}
+      {x: 0, y: -0.25}
+      #{x:0.5, y:-1}
+    ]
+    @angle = 0
 
   update : (state) ->
     @x = state.x
@@ -25,7 +25,7 @@ class Asteroid
     ctx.translate(@x * SCALE, @y * SCALE)
     ctx.rotate(@angle)
     ctx.translate(-(@x) * SCALE, -(@y) * SCALE)
-    ctx.fillStyle = @color
+    ctx.fillStyle = 'yellow'
 
     ctx.beginPath()
     ctx.moveTo((@x + @points[0].x) * SCALE, (@y + @points[0].y) * SCALE)
@@ -37,4 +37,4 @@ class Asteroid
     ctx.stroke()
     ctx.restore()
 
-@Asteroid = Asteroid
+@Player = Player
