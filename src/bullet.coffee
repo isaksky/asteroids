@@ -9,14 +9,21 @@ random = ( min, max ) ->
   return min + Math.random() * (max - min)
 
 class Bullet
-  constructor : (@radius, @x, @y) ->
+  constructor : (radius, x, y, source_object_guid) ->
+    @init(radius, x, y, source_object_guid)
+
+  init : (@radius, @x, @y, @source_object_guid) ->
+    @mass = @radius # i know
     @guid = get_guid()
     @color = random(COLORS)
     @hp = 1
+    @start_time = (new Date).getTime()
 
   update : (state) ->
     @x = state.x
     @y = state.y
+
+
 
   draw : (ctx) ->
     return if @hp <= 0
@@ -26,7 +33,7 @@ class Bullet
     ctx.fillStyle = @color
 
     ctx.beginPath()
-    ctx.arc(SCALE * (@x - @radius), SCALE * (@y - @radius), SCALE * @radius, 0, TWO_PI, true)
+    ctx.arc(SCALE * (@x), SCALE * (@y), SCALE * @radius, 0, TWO_PI, true)
 
     ctx.closePath()
     ctx.fill()

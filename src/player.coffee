@@ -2,7 +2,7 @@ COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F
 MIN_LINE_WIDTH = 0.3
 class Player
   constructor : (@x, @y) ->
-    @guid = "player" #get_guid()
+    @guid = get_guid()
     @points = [
       {x: 0.75, y: 0}
       #{x: 0.15, y: 1}
@@ -13,11 +13,9 @@ class Player
     ]
     @angle = 0
     @hp = 100
+    @fire_rate_limiter = 0
 
-  update : (state) ->
-    @x = state.x
-    @y = state.y
-    @angle = state.angle
+  update : ({@x, @y, @angle}) ->
 
   draw : (ctx) ->
     ctx.save()
