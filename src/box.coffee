@@ -241,6 +241,7 @@ SMALLEST_BULLET_RADIUS = 0.05
     bullet_body = @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
     pow = 0.1 * (radius / 0.05)
     pow *= 3 if radius > SMALLEST_BULLET_RADIUS
+    bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
     bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
       Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
     @player.fire_rate_limiter += (radius - SMALLEST_BULLET_RADIUS) * 75
