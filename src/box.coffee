@@ -56,7 +56,8 @@ SMALLEST_BULLET_RADIUS = 0.05
   setup : ->
     @finished = false
     @game_objects = {}
-    for n in [0..15]
+    num_asteroids = Math.floor(@height * @width * 15 / (800 * 600))
+    for n in [1..num_asteroids]
       random_points = random_polygon_points(random(0.25, 1), random(5, 8))
       asteroid = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), random(@height / 10 / SCALE, (@height - @height / 10) / SCALE))
       @game_objects[asteroid.guid] = asteroid
