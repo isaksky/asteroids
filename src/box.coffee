@@ -52,6 +52,7 @@ SMALLEST_BULLET_RADIUS = 0.05
 
 @sketch = Sketch.create
   container : document.getElementById "container"
+
   setup : ->
     @finished = false
     @game_objects = {}
@@ -69,7 +70,7 @@ SMALLEST_BULLET_RADIUS = 0.05
     @world = new b2World(gravity, allow_sleep)
     window.world = @world
 
-    @add_world_boundaries()
+    #@add_world_boundaries()
 
     fix_def = new b2FixtureDef
     fix_def.density = 1.0
@@ -119,14 +120,13 @@ SMALLEST_BULLET_RADIUS = 0.05
         else if a instanceof Player && b instanceof Bullet && b.source_object_guid == a.guid
           contact.SetEnabled(false)
 
-    listener.BeginContact = (contact) =>
-      window.contact = contact
-      guid_a = contact.GetFixtureA().GetBody().GetUserData()
-      guid_b = contact.GetFixtureB().GetBody().GetUserData()
-      if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
-        #console.log "collision between #{guid_a} and #{guid_b}"
-        a = @game_objects[guid_a]
-        b = @game_objects[guid_b]
+    # listener.BeginContact = (contact) =>
+    #   window.contact = contact
+    #   guid_a = contact.GetFixtureA().GetBody().GetUserData()
+    #   guid_b = contact.GetFixtureB().GetBody().GetUserData()
+    #   if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
+    #     a = @game_objects[guid_a]
+    #     b = @game_objects[guid_b]
 
         # if a instanceof Asteroid && b instanceof Bullet
         #   a.hp -= b.mass * 100
@@ -153,7 +153,7 @@ SMALLEST_BULLET_RADIUS = 0.05
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
         a = @game_objects[guid_a]
         b = @game_objects[guid_b]
-        #console.log ["a,b,i:", id_a, id_b, impulse]
+
         if a instanceof Asteroid && b instanceof Bullet
           a.hp -= force
         else if a instanceof Asteroid
@@ -161,10 +161,10 @@ SMALLEST_BULLET_RADIUS = 0.05
         else if a instanceof Bullet
           a.hp = 0
         else if a instanceof Player && !(b instanceof Bullet && b.source_object_guid == a.guid)
-          a.hp -= 25
+          a.hp -= force
 
         if b instanceof Asteroid && a instanceof Bullet
-          b.hp -= Math.abs(impulse.normalImpulses[0]) * 15
+          b.hp -= force
         else if b instanceof Asteroid
           b.hp -= force
         else if b instanceof Bullet
@@ -244,9 +244,42 @@ SMALLEST_BULLET_RADIUS = 0.05
       Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
     @player.fire_rate_limiter += (radius - SMALLEST_BULLET_RADIUS) * 75
 
+  wrap_object_pos : (body) ->
+    # unless body.m_max_radius?
+    #   body.m_max_radius = @game_objects[body.GetUserData()].radius
+    # unless body.m_max_radius? # probably polygon then
+    #   vertices = body.GetFixtureList()?.GetShape()?.GetVertices()
+    #   body.m_max_radius = _.max _.map(vertices, (v) -> Math.sqrt(v.x * v.x + v.y * v.y))
+
+    # @global_max_radius ||= 0
+    # @global_max_radius = Math.max(@global_max_radius, body.m_max_radius)
+    # window.gm = @global_max_radius
+    #offset = body.m_max_radius
+
+    offset = 1.18 # this is the max radius i've observed using the logic above.
+    # flipping with an offset based on the object causes problems with unnatural collisions
+    # around the edges, so just keep fixed for all objects.
+    pos = body.GetPosition()
+
+    new_x = new_y = null
+    if pos.x > @width / SCALE + offset
+      new_x = -offset
+    else if pos.x < 0 - offset
+      new_x = @width / SCALE + offset
+
+    if pos.y > @height / SCALE + offset
+      new_y = -offset
+    else if pos.y < 0 - offset
+      new_y = @height / SCALE + offset
+
+    if new_x? || new_y?
+      new_x = pos.x unless new_x?
+      new_y = pos.y unless new_y?
+      body.SetPosition(new b2Vec2(new_x, new_y))
+
   update : ->
     return if @finished
-    @player.fire_rate_limiter -= 1
+    @player.fire_rate_limiter -= 1.4
     @player.fire_rate_limiter = 0 if @player.fire_rate_limiter < 0
 
     if @keys.UP
@@ -265,40 +298,39 @@ SMALLEST_BULLET_RADIUS = 0.05
         @shoot_bullet 0.05
     if @keys.SHIFT
       if @player.fire_rate_limiter <= 0
-        @shoot_bullet 0.40
+        @shoot_bullet 0.20
 
     #bottom
-    edge_padding = 0.05
-    body_def = new b2BodyDef
     window.player_body = @player_body #debugging
     @world.Step(1 / 60, 10, 10)
-    @world.DrawDebugData()
+    @world.DrawDebugData() if @debug
     @world.ClearForces()
 
     graveyard = []
-    b = @world.GetBodyList()
+    body = @world.GetBodyList()
     @asteroids_remaining = 0
     while true
-      break unless b?
-      if b.GetUserData()?
-        pos = b.GetPosition()
-        game_object = @game_objects[b.GetUserData()]
+      break unless body?
+      if body.GetUserData()?
+        pos = body.GetPosition()
+        game_object = @game_objects[body.GetUserData()]
         if game_object.hp <= 0
           graveyard.push(game_object)
-          @world.DestroyBody(b)
+          @world.DestroyBody(body)
           @finished = true if game_object == @player
 
         else if game_object instanceof Bullet && ((new Date).getTime() - game_object.start_time) > 1400
           graveyard.push(game_object)
-          @world.DestroyBody(b)
+          @world.DestroyBody(body)
         else
+          @wrap_object_pos(body)
           state =
             x : pos.x
             y : pos.y
-            angle : b.GetAngle()
+            angle : body.GetAngle()
           game_object.update(state)
       @asteroids_remaining += 1 if game_object instanceof Asteroid
-      b = b.m_next
+      body = body.m_next
 
     delete @game_objects[o.guid] for o in graveyard
     if @asteroids_remaining == 0
