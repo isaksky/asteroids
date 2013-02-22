@@ -311,8 +311,7 @@ SMALLEST_BULLET_RADIUS = 0.05
     graveyard = []
     body = @world.GetBodyList()
     @asteroids_remaining = 0
-    while true
-      break unless body?
+    while body?
       if body.GetUserData()?
         pos = body.GetPosition()
         game_object = @game_objects[body.GetUserData()]
