@@ -1,5 +1,5 @@
 COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
-MIN_LINE_WIDTH = 0.5
+MIN_LINE_WIDTH = 0.75
 
 class @Player
   constructor : (@x, @y) ->

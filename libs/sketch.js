@@ -49,6 +49,7 @@ var Sketch = (function() {
         autostart  : true,
         autoclear  : true,
         autopause  : true,
+        autoresize : true,
         container  : document.body,
         interval   : 1,
         type       : CANVAS
@@ -165,11 +166,11 @@ var Sketch = (function() {
 
             // Remove event handlers
             for ( type in bindings ) {
-                
+
                 list = bindings[ type ];
 
                 for ( i = 0, n = list.length; i < n; i++ ) {
-                    
+
                     binding = list[ i ];
                     unbind( binding.el, type, binding.fn );
                 }
@@ -221,7 +222,7 @@ var Sketch = (function() {
         } else {
 
             return function( el, ev, fn ) {
-                
+
                 el[ 'on' + ev ] = fn;
                 remember( el, ev, fn );
             };
@@ -239,7 +240,7 @@ var Sketch = (function() {
                 var binding;
 
                 for ( var i = bindings[ ev ].length - 1; i >= 0; i-- ) {
-                    
+
                     binding = bindings[ ev ][ i ];
 
                     if ( binding.el === el && binding.fn === fn ) {
@@ -282,8 +283,9 @@ var Sketch = (function() {
 
         options = extend( options || {}, defaults );
 
-        var id = 'sketch-' + GUID++;
-        var canvas = document.createElement( 'canvas' );
+        var id = 'sketch-' + GUID++,
+            hasCustomCanvas = options.hasOwnProperty('canvas'),
+            canvas = hasCustomCanvas ? options['canvas'] : document.createElement( 'canvas' );
 
         switch ( options.type ) {
 
@@ -305,6 +307,7 @@ var Sketch = (function() {
             default:
 
                 canvas = ctx = document.createElement( 'div' );
+
         }
 
         // DOM type consistency
@@ -312,9 +315,16 @@ var Sketch = (function() {
 
         // ID & class can be useful
         canvas.className = 'sketch';
-        canvas.id = id;
 
-        options.container.appendChild( canvas );
+        if(!hasCustomCanvas) {
+
+            options.container.appendChild( canvas );
+            if(!options.hasOwnProperty('autoresize')) options.autoresize = defaults.autoresize;
+            canvas.id = id;
+
+        } else {
+            options.autoresize = false;
+        }
 
         // Mix globals into the window object
         extend( self, globals );
@@ -328,8 +338,8 @@ var Sketch = (function() {
         // Bind event handlers
         bindEvents();
 
-        // Set initial dimensions
-        resize();
+        // Set initial dimension (only if `autoresize` is `true`)
+        if(options.autoresize) resize();
 
         // Add to global index
         instances.push( ctx );
@@ -377,6 +387,21 @@ var Sketch = (function() {
         }
 
         return copy;
+    }
+
+    // Replaces array contents, maintaining the original object
+    function displace( array, contents ) {
+
+        // we could use `a.splice.apply( a, [ 0, a.length ].concat( b ) )`
+        // but contents could be a `touchlist` and we need to flatten it
+
+        array.length = 0;
+
+        for ( var i = 0, n = contents.length; i < n; i++ ) {
+            array[i] = contents[i];
+        }
+
+        return array;
     }
 
     // Sets up sketch mouse & keyboard events
@@ -480,7 +505,7 @@ var Sketch = (function() {
             event.preventDefault();
 
             event = augment( event );
-            ctx.touches = event.touches;
+            displace( ctx.touches, event.touches );
             updateMouse( ctx.touches[0] );
 
             if ( ctx.touchstart ) ctx.touchstart( event );
@@ -490,7 +515,7 @@ var Sketch = (function() {
         function touchmove( event ) {
 
             event = augment( event );
-            ctx.touches = event.touches;
+            displace( ctx.touches, event.touches );
             updateMouse( ctx.touches[0] );
 
             if ( ctx.touchmove ) ctx.touchmove( event );
@@ -532,7 +557,7 @@ var Sketch = (function() {
                 ctx.dragging = true;
             }
 
-            ctx.touches = [ event ];
+            displace( ctx.touches, [ event ] );
 
             if ( ctx.touchstart ) ctx.touchstart( event );
             if ( ctx.mousedown ) ctx.mousedown( event );
@@ -543,7 +568,7 @@ var Sketch = (function() {
             event = augment( event );
             updateMouse( event );
 
-            ctx.touches = [ event ];
+            displace( ctx.touches, [ event ] );
 
             if ( ctx.touchmove ) ctx.touchmove( event );
             if ( ctx.mousemove ) ctx.mousemove( event );
@@ -616,18 +641,21 @@ var Sketch = (function() {
         bind( document, 'keydown', keydown );
         bind( document, 'keyup', keyup );
 
-        bind( window, 'resize', resize );
+        // Only binds window resize if `autoresize` is set to `true`
+        if( defaults.autosize ) bind( window, 'resize', resize );
     }
 
     // ----------------------------------------
     // Event handlers
     // ----------------------------------------
 
-    function update( now ) {
+    function update() {
 
         if ( !counter ) {
 
-            ctx.dt = ( now = now || Date.now() ) - ctx.now;
+            var now = Date.now();
+
+            ctx.dt = now - ctx.now;
             ctx.millis += ctx.dt;
             ctx.now = now;
 
@@ -641,14 +669,21 @@ var Sketch = (function() {
     }
 
     function resize( event ) {
-
+        var aspect_ratio, num_pixels, new_height;
         var target = ctx.type === DOM ? ctx.style : ctx.canvas;
-
         if ( ctx.fullscreen ) {
-
-            ctx.height = target.height = window.innerHeight;
-            ctx.width = target.width = window.innerWidth;
-
+            num_pixels = window.innerWidth * window.innerHeight;
+            if (ctx.max_pixels && num_pixels > ctx.max_pixels){
+                aspect_ratio = window.innerWidth / window.innerHeight;
+                new_height = Math.sqrt(ctx.max_pixels / aspect_ratio);
+                ctx.height = target.height = new_height;
+                ctx.width  = target.width  = new_height * aspect_ratio;
+                target.style.height = window.innerHeight + 'px';
+                target.style.width = window.innerWidth + 'px';
+            } else {
+                ctx.height = target.height = window.innerHeight;
+                ctx.width  = target.width  = window.innerWidth;
+            }
         } else {
 
             target.height = ctx.height;
