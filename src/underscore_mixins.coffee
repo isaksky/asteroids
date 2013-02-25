@@ -6,3 +6,5 @@ _.mixin
       max = min || 1
       min = 0
     return min + Math.random() * (max - min)
+
+  now : Date.now || (new Date).getTime

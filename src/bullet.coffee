@@ -1,29 +1,19 @@
 COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
 
-random = ( min, max ) ->
-  if ( min && typeof min.length == 'number' && !!min.length )
-    return min[ Math.floor( Math.random() * min.length ) ]
-  if ( typeof max != 'number' )
-    max = min || 1
-    min = 0
-  return min + Math.random() * (max - min)
-
-class Bullet
+class @Bullet
   constructor : (radius, x, y, source_object_guid) ->
     @init(radius, x, y, source_object_guid)
 
   init : (@radius, @x, @y, @source_object_guid) ->
     @mass = @radius # i know
     @guid = get_guid()
-    @color = random(COLORS)
+    @color = _.random(COLORS)
     @hp = 1
-    @start_time = (new Date).getTime()
+    @start_time = _.now()
 
   update : (state) ->
     @x = state.x
     @y = state.y
-
-
 
   draw : (ctx) ->
     return if @hp <= 0
@@ -38,5 +28,3 @@ class Bullet
     ctx.closePath()
     ctx.fill()
     ctx.restore()
-
-@Bullet = Bullet

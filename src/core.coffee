@@ -42,6 +42,19 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
 SMALLEST_BULLET_RADIUS = 0.05
 
+@calc_game_object_bounds = (game_object) ->
+  return if game_object.min_x?
+  if game_object.points?
+    for p in game_object.points
+      game_object.min_x = p.x if !game_object.min_x? || p.x < game_object.min_x
+      game_object.max_x = p.x if !game_object.max_x? || p.x > game_object.max_x
+      game_object.min_y = p.y if !game_object.min_y? || p.y < game_object.min_y
+      game_object.max_y = p.y if !game_object.max_y? || p.y > game_object.max_y
+  else if game_object.radius?
+    throw new Error("not implemented")
+  else
+    throw new Error("Dont know how to calculate bounds for #{game_object.constructor.name}")
+
 @sketch = Sketch.create
   container : document.getElementById "container"
   max_pixels : 1280 * 800
@@ -113,6 +126,8 @@ SMALLEST_BULLET_RADIUS = 0.05
           contact.SetEnabled(false)
         else if a instanceof Player && b instanceof Bullet && b.source_object_guid == a.guid
           contact.SetEnabled(false)
+        # else if a instanceof Particle && b instanceof Particle
+        #   contact.SetEnabled(false)
 
     # listener.BeginContact = (contact) =>
     #   window.contact = contact
@@ -272,18 +287,49 @@ SMALLEST_BULLET_RADIUS = 0.05
       new_y = pos.y unless new_y?
       body.SetPosition(new b2Vec2(new_x, new_y))
 
+  gas : (game_object, physics_body, do_backwards) ->
+    angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
+    pow = 0.1
+    physics_body.ApplyImpulse(new b2Vec2(Math.cos(angle) * pow,
+      Math.sin(angle) * pow), physics_body.GetWorldCenter())
+
+    radius = 0.1
+    calc_game_object_bounds(game_object)
+    offset = if do_backwards then game_object.max_x + 0.1 else game_object.min_x - 0.1
+    x = game_object.x + (offset + radius) * Math.cos(angle + PI % TWO_PI)
+    y = game_object.y + (offset + radius) * Math.sin(angle + PI % TWO_PI)
+    #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
+    particle = new Particle(radius, x, y)
+    @game_objects[particle.guid] = particle
+    body_def = new b2BodyDef
+    body_def.type = b2Body.b2_dynamicBody
+    fix_def = new b2FixtureDef
+    fix_def.density = 0.5
+    fix_def.friction = 5.0
+    fix_def.restitution = 0.2
+
+    fix_def.shape = new b2CircleShape(particle.radius)
+    fix_def.restitution = 0.4
+    body_def.position.x = particle.x
+    body_def.position.y = particle.y
+    body_def.userData = particle.guid
+    particle_body = @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+    particle_body.SetLinearVelocity(physics_body.GetLinearVelocity())
+    particle_angle = (angle + PI) % TWO_PI
+    particle_body.ApplyImpulse(new b2Vec2(Math.cos(particle_angle) * pow,
+      Math.sin(particle_angle) * pow), physics_body.GetWorldCenter())
+
   update : ->
     return if @finished
     @player.fire_rate_limiter -= 1.4
     @player.fire_rate_limiter = 0 if @player.fire_rate_limiter < 0
 
     if @keys.UP
-      pow = 0.1
-      @player_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
-        Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
+      @gas(@player, @player_body, false)
     if @keys.DOWN
-      pow = 0.1
-      @player_body.ApplyImpulse(new b2Vec2(-Math.cos(@player.angle) * pow, -Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
+      @gas(@player, @player_body, true)
+      # pow = 0.1
+      # @player_body.ApplyImpulse(new b2Vec2(-Math.cos(@player.angle) * pow, -Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
     if @keys.LEFT
       @player_body.ApplyTorque(-0.2)
     if @keys.RIGHT
@@ -313,7 +359,10 @@ SMALLEST_BULLET_RADIUS = 0.05
           @world.DestroyBody(body)
           @finished = true if game_object == @player
 
-        else if game_object instanceof Bullet && ((new Date).getTime() - game_object.start_time) > 1400
+        else if game_object instanceof Bullet && (_.now() - game_object.start_time) > 1400
+          graveyard.push(game_object)
+          @world.DestroyBody(body)
+        else if game_object instanceof Particle && (_.now() - game_object.start_time) > Particle.MAX_AGE
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
