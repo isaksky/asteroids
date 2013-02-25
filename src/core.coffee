@@ -104,7 +104,11 @@ SMALLEST_BULLET_RADIUS = 0.05
       fixture = @world.CreateBody(body_def).CreateFixture(fix_def)
       if game_object instanceof Asteroid
         fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
-      @player_body = fixture.GetBody() if game_object instanceof Player
+      if game_object instanceof Player
+        @player_body = fixture.GetBody()
+        @player_body.SetAngularDamping(2.5)
+        @player_body.SetLinearDamping(1)
+
 
     @start_collision_detection()
 
@@ -229,8 +233,9 @@ SMALLEST_BULLET_RADIUS = 0.05
   #   @world.CreateBody(body_def).CreateFixture(fix_def)
 
   shoot_bullet : (radius) ->
-    x = @player.x + (0.90 + radius) * Math.cos(@player.angle)
-    y = @player.y + (0.90 + radius) * Math.sin(@player.angle)
+    calc_game_object_bounds(@player)
+    x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
+    y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
     #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     bullet = new Bullet(radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
