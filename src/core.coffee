@@ -18,7 +18,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     guid_idx += 1
     "#{guid_idx}"))()
 
-@random_polygon_points = (radius, num_sides) ->
+random_polygon_points = (radius, num_sides) ->
   angle_step = Math.PI * 2 / num_sides
   points = []
   angle = - (Math.PI / 2) #0 #angle_step
@@ -42,7 +42,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
 SMALLEST_BULLET_RADIUS = 0.05
 
-@calc_game_object_bounds = (game_object) ->
+calc_game_object_bounds = (game_object) ->
   return if game_object.min_x?
   if game_object.points?
     for p in game_object.points
