@@ -1,4 +1,4 @@
-COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
+COLORS = ["rgba(233, 244, 0, 0)", "rgba(233, 0, 0, 0)", "rgba(0, 244, 0, 0)", "rgba(0, 0, 255, 0)"]
 
 class @Bullet
   constructor : (radius, x, y, source_object_guid) ->
@@ -17,14 +17,22 @@ class @Bullet
 
   draw : (ctx) ->
     return if @hp <= 0
+    age = _.now() - @start_time
     ctx.save()
     ctx.globalCompositeOperation = "lighter"
     #ctx.globalAlpha = 0.6
     ctx.fillStyle = @color
 
+    x = @x * SCALE
+    y = @y * SCALE
+    inner_circle_size = SCALE * @radius * 0.95
+    gradient_size = SCALE * @radius * 2
     ctx.beginPath()
-    ctx.arc(SCALE * (@x), SCALE * (@y), SCALE * @radius, 0, TWO_PI, true)
-
+    ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
+    gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
+    gradient.addColorStop(inner_circle_size / gradient_size, "rgba(255,255,255, 1)")
+    gradient.addColorStop(1, @color) #'#69D2E7'
+    ctx.fillStyle = gradient
     ctx.closePath()
     ctx.fill()
     ctx.restore()
