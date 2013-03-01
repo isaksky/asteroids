@@ -11,7 +11,7 @@ b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
 @SCALE = 60#(innerWidth * innerHeight) * 60  / (1280 * 800)
-
+Player.MAX_FIRE_JUICE = 150
 @get_guid = (() ->
   guid_idx = 0
   (() ->
@@ -60,6 +60,7 @@ calc_game_object_bounds = (game_object) ->
   max_pixels : 1280 * 800
 
   setup : ->
+    @score = 0
     @finished = false
     @game_objects = {}
     num_asteroids = Math.floor(@height * @width * 15 / (800 * 600))
@@ -160,7 +161,7 @@ calc_game_object_bounds = (game_object) ->
         #   b.hp -= 25
 
     listener.PostSolve = (contact, impulse) =>
-      force = Math.abs(impulse.normalImpulses[0]) * 15
+      force = Math.abs(impulse.normalImpulses[0]) * 8.5
       guid_a = contact.GetFixtureA().GetBody().GetUserData()
       guid_b = contact.GetFixtureB().GetBody().GetUserData()
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
@@ -257,9 +258,9 @@ calc_game_object_bounds = (game_object) ->
     bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
     bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
       Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
-    @player.fire_rate_limiter += (radius - SMALLEST_BULLET_RADIUS) * 75
+    @player.fire_juice -= radius * 50
 
-  wrap_object_pos : (body) ->
+  wrap_objects : (body) ->
     # unless body.m_max_radius?
     #   body.m_max_radius = @game_objects[body.GetUserData()].radius
     # unless body.m_max_radius? # probably polygon then
@@ -294,7 +295,7 @@ calc_game_object_bounds = (game_object) ->
 
   gas : (game_object, physics_body, do_backwards) ->
     angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
-    pow = 0.1
+    pow = 0.04#if do_backwards then 0.02 else 0.04
     physics_body.ApplyImpulse(new b2Vec2(Math.cos(angle) * pow,
       Math.sin(angle) * pow), physics_body.GetWorldCenter())
 
@@ -326,8 +327,8 @@ calc_game_object_bounds = (game_object) ->
 
   update : ->
     return if @finished
-    @player.fire_rate_limiter -= 1.4
-    @player.fire_rate_limiter = 0 if @player.fire_rate_limiter < 0
+    @player.fire_juice += 1.5
+    @player.fire_juice = Player.MAX_FIRE_JUICE if @player.fire_juice > Player.MAX_FIRE_JUICE #Math.min(@player.fire_juice, 100)
 
     if @keys.UP
       @gas(@player, @player_body, false)
@@ -340,10 +341,10 @@ calc_game_object_bounds = (game_object) ->
     if @keys.RIGHT
       @player_body.ApplyTorque(0.2)
     if @keys.SPACE
-      if @player.fire_rate_limiter <= 0
+      if @player.fire_juice > 0
         @shoot_bullet 0.05
     if @keys.SHIFT
-      if @player.fire_rate_limiter <= 0
+      if @player.fire_juice > 0
         @shoot_bullet 0.20
 
     #bottom
@@ -371,7 +372,7 @@ calc_game_object_bounds = (game_object) ->
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
-          @wrap_object_pos(body)
+          @wrap_objects(body)
           state =
             x : pos.x
             y : pos.y
@@ -380,7 +381,10 @@ calc_game_object_bounds = (game_object) ->
       @asteroids_remaining += 1 if game_object instanceof Asteroid
       body = body.m_next
 
-    delete @game_objects[o.guid] for o in graveyard
+      for o in graveyard
+        @score += 50 if o instanceof Asteroid
+        delete @game_objects[o.guid]
+
     if @asteroids_remaining == 0
       @finished = true
 
@@ -400,10 +404,26 @@ calc_game_object_bounds = (game_object) ->
       debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
       @world.SetDebugDraw(debugDraw)
 
+  draw_fire_juice_bar : ->
+    bar_w = 100
+    bar_h = 15
+    @strokeStyle = "#63D1F4"
+    @strokeRect(10, 10, bar_w, bar_h)
+
+    @fillStyle = "#63D1F4"
+    @fillRect(10, 10, (@player.fire_juice / Player.MAX_FIRE_JUICE) * bar_w,  bar_h)
+
   draw : () ->
     return if @debug
     for key, game_object of @game_objects
       game_object.draw(@)
+
+    @draw_fire_juice_bar()
+
+    @textAlign = "right"
+    @font = "30px monospace"
+    @strokeStyle = "#63D1F4"
+    @strokeText("#{@score}", @width - 5, 30)
 
     if @finished
       @textAlign = "center"

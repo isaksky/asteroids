@@ -14,7 +14,7 @@ class @Player
     ]
     @angle = 0
     @hp = 25
-    @fire_rate_limiter = 0
+    @fire_juice = 300
 
   update : ({@x, @y, @angle}) ->
 
