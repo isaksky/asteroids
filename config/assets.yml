@@ -1,0 +1,19 @@
+embed_assets: off
+javascript_compressor: closure
+
+javascripts:
+  app:
+    - libs/underscore-min.js
+    - libs/Box2dWeb-2.1.a.3.min.js
+    - libs/zepto.min.js
+    - libs/sketch.js
+    - out/underscore_mixins.js
+    - out/asteroid.js
+    - out/player.js
+    - out/bullet.js
+    - out/particle.js
+    - out/core.js
+
+stylesheets:
+  app:
+    - css/style.css

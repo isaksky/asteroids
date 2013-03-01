@@ -1,1 +1,2 @@
-coffee -o out/ -cw src/
+coffee -o out/ -c src/
+jammit
