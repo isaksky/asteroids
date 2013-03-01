@@ -123,8 +123,8 @@ calc_game_object_bounds = (game_object) ->
         b = @game_objects[guid_b]
 
         # Dont care about two bullets
-        # if a.constructor.name == b.constructor.name == "Bullet"
-        #   contact.SetEnabled(false)
+        if a.constructor.name == b.constructor.name == "Bullet"
+          contact.SetEnabled(false)
 
         # ignore contacts between player and his own bullets
         if b instanceof Player && a instanceof Bullet && a.source_object_guid == b.guid
