@@ -14,11 +14,28 @@ class @Player
     ]
     @angle = 0
     @hp = 25
-    @fire_juice = 300
+    @fire_juice = 0
 
   update : ({@x, @y, @angle}) ->
 
   draw : (ctx) ->
+    inner_circle_size = 0.0  * SCALE
+    gradient_size = 0.5 * SCALE
+    x = @x * SCALE + (@max_x / 3 * SCALE) * Math.cos(@angle)
+    y = @y * SCALE + (@max_x / 3 * SCALE) * Math.sin(@angle)
+    ctx.save()
+
+    ctx.beginPath()
+    ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
+    gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
+    gradient.addColorStop(inner_circle_size / gradient_size, "rgba(255,255,255, 1)")
+    gradient.addColorStop(0.01, "rgba(202,112,220,#{@fire_juice / 300})")
+    gradient.addColorStop(1, "rgba(202,112,220,0)")
+    ctx.fillStyle = gradient
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+
     ctx.save()
     ctx.globalCompositeOperation = "lighter"
     #ctx.globalAlpha = 0.6
@@ -34,6 +51,8 @@ class @Player
        ctx.lineTo((point.x + @x) * SCALE, (point.y + @y) * SCALE)
     ctx.lineTo((@x + @points[0].x) * SCALE, (@y + @points[0].y) * SCALE)
     ctx.closePath()
-    #ctx.fill()
     ctx.stroke()
     ctx.restore()
+
+    # ctx.fillStyle = "rgba(202,112,220,#{@fire_juice / 300})"#'white'#'#32cd32'
+    # ctx.fill()

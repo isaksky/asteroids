@@ -12,6 +12,9 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
 @SCALE = 60#(innerWidth * innerHeight) * 60  / (1280 * 800)
 Player.MAX_FIRE_JUICE = 150
+ASTEROIDS_PER_PIXEL = 15 / (800 * 600)
+SMALLEST_BULLET_RADIUS = 0.05
+
 @get_guid = (() ->
   guid_idx = 0
   (() ->
@@ -40,8 +43,6 @@ random_polygon_points = (radius, num_sides) ->
       b.SetAwake(true)
     b = b.m_next
 
-SMALLEST_BULLET_RADIUS = 0.05
-
 calc_game_object_bounds = (game_object) ->
   return if game_object.min_x?
   if game_object.points?
@@ -58,18 +59,19 @@ calc_game_object_bounds = (game_object) ->
 @sketch = Sketch.create
   container : document.getElementById "container"
   max_pixels : 1280 * 800
-
   setup : ->
     @score = 0
     @finished = false
     @game_objects = {}
-    num_asteroids = Math.floor(@height * @width * 15 / (800 * 600))
+    num_asteroids = Math.floor(@height * @width * ASTEROIDS_PER_PIXEL)
     for n in [1..num_asteroids]
       random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
       asteroid = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE))
       @game_objects[asteroid.guid] = asteroid
 
     @player = new Player(@width / SCALE / 2, @height / SCALE / 2)
+    calc_game_object_bounds(@player)
+
     window.player = @player
     @game_objects[@player.guid] = @player
 
@@ -78,38 +80,15 @@ calc_game_object_bounds = (game_object) ->
     @world = new b2World(gravity, allow_sleep)
     window.world = @world
 
-    #@add_world_boundaries()
-
-    fix_def = new b2FixtureDef
-    fix_def.density = 1.0
-    fix_def.friction = 0.5
-    fix_def.restitution = 0.2
-
     for guid, game_object of @game_objects
       #continue unless po?.points?
-      body_def = new b2BodyDef
-      body_def.type = b2Body.b2_dynamicBody
-      fix_def.shape = new b2PolygonShape
-      fix_def.restitution = 0.4
-      shape_points = []
-      #for p in [{x: 0, y: -2}, {x: 2, y: 0}, {x: 0, y:2}, {x:-0.5, y: 1.5}]
-      for p in game_object.points
-        vec = new b2Vec2
-        vec.Set(p.x, p.y)
-        shape_points.push(vec)
-      fix_def.shape.SetAsArray(shape_points, shape_points.length)
-      body_def.position.x = game_object.x
-      body_def.position.y = game_object.y
-      body_def.userData = game_object.guid
-      #console.log guid
-      fixture = @world.CreateBody(body_def).CreateFixture(fix_def)
+      fixture = @setup_physics_for_polygon game_object
       if game_object instanceof Asteroid
         fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
       if game_object instanceof Player
-        @player_body = fixture.GetBody()
+        window.player_body = @player_body = fixture.GetBody()
         @player_body.SetAngularDamping(2.5)
         @player_body.SetLinearDamping(1)
-
 
     @start_collision_detection()
 
@@ -131,34 +110,11 @@ calc_game_object_bounds = (game_object) ->
           contact.SetEnabled(false)
         else if a instanceof Player && b instanceof Bullet && b.source_object_guid == a.guid
           contact.SetEnabled(false)
+
+        if a.invuln_ticks || b.invuln_ticks
+          contact.SetEnabled(false)
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
-
-    # listener.BeginContact = (contact) =>
-    #   window.contact = contact
-    #   guid_a = contact.GetFixtureA().GetBody().GetUserData()
-    #   guid_b = contact.GetFixtureB().GetBody().GetUserData()
-    #   if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
-    #     a = @game_objects[guid_a]
-    #     b = @game_objects[guid_b]
-
-        # if a instanceof Asteroid && b instanceof Bullet
-        #   a.hp -= b.mass * 100
-        # else if a instanceof Asteroid
-        #   a.hp -= 3
-        # else if a instanceof Bullet
-        #   a.hp = 0
-        # else if a instanceof Player && !(b instanceof Bullet && b.source_object_guid == a.guid)
-        #   a.hp -= 25
-
-        # if b instanceof Asteroid && a instanceof Bullet
-        #   b.hp -= a.mass * 100
-        # else if b instanceof Asteroid
-        #   b.hp -= 3
-        # else if b instanceof Bullet
-        #   b.hp = 0
-        # else if b instanceof Player && !(a instanceof Bullet && a.source_object_guid == b.guid)
-        #   b.hp -= 25
 
     listener.PostSolve = (contact, impulse) =>
       force = Math.abs(impulse.normalImpulses[0]) * 8.5
@@ -185,7 +141,6 @@ calc_game_object_bounds = (game_object) ->
           b.hp = 0
         else if b instanceof Player && !(a instanceof Bullet && a.source_object_guid == b.guid)
           b.hp -= force
-
 
     @world.SetContactListener(listener)
 
@@ -232,14 +187,28 @@ calc_game_object_bounds = (game_object) ->
   #   fix_def.shape = new b2PolygonShape
   #   fix_def.shape.SetAsBox(edge_padding, @height / SCALE / 2)
   #   @world.CreateBody(body_def).CreateFixture(fix_def)
+  setup_physics_for_polygon: (game_object) ->
+    fix_def = new b2FixtureDef
+    fix_def.density = 1.0
+    fix_def.friction = 0.5
+    fix_def.restitution = 0.2
+    body_def = new b2BodyDef
+    body_def.type = b2Body.b2_dynamicBody
+    fix_def.shape = new b2PolygonShape
+    fix_def.restitution = 0.4
+    shape_points = []
+    for p in game_object.points
+      vec = new b2Vec2
+      vec.Set(p.x, p.y)
+      shape_points.push(vec)
+    fix_def.shape.SetAsArray(shape_points, shape_points.length)
+    body_def.position.x = game_object.x
+    body_def.position.y = game_object.y
+    body_def.userData = game_object.guid
+    #console.log guid
+    return @world.CreateBody(body_def).CreateFixture(fix_def)
 
-  shoot_bullet : (radius) ->
-    calc_game_object_bounds(@player)
-    x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
-    y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
-    #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    bullet = new Bullet(radius, x, y, @player.guid)
-    @game_objects[bullet.guid] = bullet
+  physics_add_body_for_bullet: (bullet) ->
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
     fix_def = new b2FixtureDef
@@ -253,11 +222,19 @@ calc_game_object_bounds = (game_object) ->
     body_def.position.y = bullet.y
     body_def.userData = bullet.guid
     bullet_body = @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
-    pow = 0.1 * (radius / 0.05)
-    pow *= 3 if radius > SMALLEST_BULLET_RADIUS
+    pow = 0.1 * (bullet.radius / 0.05)
+    pow *= 3 if bullet.radius > SMALLEST_BULLET_RADIUS
     bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
     bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
       Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
+
+  shoot_bullet : (radius) ->
+    x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
+    y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
+    #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
+    bullet = new Bullet(radius, x, y, @player.guid)
+    @game_objects[bullet.guid] = bullet
+    @physics_add_body_for_bullet(bullet)
     @player.fire_juice -= radius * 50
 
   wrap_objects : (body) ->
@@ -348,7 +325,6 @@ calc_game_object_bounds = (game_object) ->
         @shoot_bullet 0.20
 
     #bottom
-    window.player_body = @player_body #debugging
     @world.Step(1 / 60, 10, 10)
     @world.DrawDebugData() if @debug
     @world.ClearForces()
@@ -379,6 +355,7 @@ calc_game_object_bounds = (game_object) ->
             angle : body.GetAngle()
           game_object.update(state)
       @asteroids_remaining += 1 if game_object instanceof Asteroid
+      game_object.invuln_ticks -= 1 if game_object.invuln_ticks
       body = body.m_next
 
       for o in graveyard
@@ -389,6 +366,22 @@ calc_game_object_bounds = (game_object) ->
       @finished = true
 
     @prev_update_millis = @millis
+    @spawn_enemies()
+
+  spawn_enemies: () ->
+    t = @millis % 1000
+    #@enemies_spawned_at_millis ||= {}
+    #k = "#{@millis * 1000}"
+    #console.log t
+    if t == 3 && !@spawned_3
+      console.log "foo!"
+      @spawned_3 = 1
+      random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+      a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 200)
+      @game_objects[a.guid] = a
+      @setup_physics_for_polygon a
+
+
 
    toggle_debug: () ->
      if @debug?

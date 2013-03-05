@@ -2,8 +2,8 @@ COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F
 
 MIN_LINE_WIDTH = 0.5
 
-class Asteroid
-  constructor : (@points, @x, @y) ->
+class @Asteroid
+  constructor : (@points, @x, @y, @invuln_ticks = 0) ->
     @guid = get_guid()
     @color = _.random(COLORS)
     @hp = 100
@@ -11,17 +11,18 @@ class Asteroid
   update : ({@x, @y, @angle}) ->
 
   draw : (ctx) ->
+    return if @invuln_ticks % 8 > 3
     ctx.save()
     ctx.globalCompositeOperation = "lighter"
     #ctx.globalAlpha = 0.6
     ctx.translate(@x * SCALE, @y * SCALE)
     ctx.rotate(@angle)
-    ctx.translate(-(@x) * SCALE, -(@y) * SCALE)
+    ctx.translate(-@x * SCALE, -@y * SCALE)
     #ctx.fillStyle = @color
     ctx.strokeStyle = @color
     line_width = MIN_LINE_WIDTH + @hp * 4 / 100
     ctx.lineWidth = line_width
-
+    #ctx.setLineDash([3]) if @invuln_ticks
     ctx.beginPath()
     #ctx.moveTo((@x + @points[0].x) * SCALE, (@y + @points[0].y) * SCALE)
     for point, i in @points
@@ -42,5 +43,3 @@ class Asteroid
     #ctx.fill()
     ctx.stroke()
     ctx.restore()
-
-@Asteroid = Asteroid
