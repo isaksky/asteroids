@@ -60,8 +60,10 @@ calc_game_object_bounds = (game_object) ->
   container : document.getElementById "container"
   max_pixels : 1280 * 800
   setup : ->
+    @total_game_time = 0
     @score = 0
     @finished = false
+    @prev_spawn_time = _.now()
     @game_objects = {}
     num_asteroids = Math.floor(@height * @width * ASTEROIDS_PER_PIXEL)
     for n in [1..num_asteroids]
@@ -304,6 +306,7 @@ calc_game_object_bounds = (game_object) ->
 
   update : ->
     return if @finished
+    @total_game_time += @millis || 0
     @player.fire_juice += 1.5
     @player.fire_juice = Player.MAX_FIRE_JUICE if @player.fire_juice > Player.MAX_FIRE_JUICE #Math.min(@player.fire_juice, 100)
 
@@ -366,22 +369,35 @@ calc_game_object_bounds = (game_object) ->
       @finished = true
 
     @prev_update_millis = @millis
-    @spawn_enemies()
+    @spawn_enemies_tick()
 
-  spawn_enemies: () ->
-    t = @millis % 1000
-    #@enemies_spawned_at_millis ||= {}
-    #k = "#{@millis * 1000}"
-    #console.log t
-    if t == 3 && !@spawned_3
-      console.log "foo!"
-      @spawned_3 = 1
-      random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-      a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 200)
-      @game_objects[a.guid] = a
-      @setup_physics_for_polygon a
+  spawn_enemies_tick: () ->
+    @spawns_by_time ||= {}
+    time_interval = Math.floor(@total_game_time / 1000) * 1000
 
+    if !@spawns_by_time[time_interval]?
+      @spawns_by_time[time_interval] = true
 
+      time_since_last_spawn = _.now() - @prev_spawn_time
+      min_delay = if @total_game_time < 15000
+        6000
+      else if @total_game_time < 25000
+        4000
+      else if @total_game_time < 35000
+        3000
+      else if @total_game_time < 40000
+        750
+      else
+        350
+
+      if time_since_last_spawn > min_delay
+        console.log "Spawning enemy!"
+        @prev_spawn_time = _.now()
+        random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+        a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
+        @game_objects[a.guid] = a
+        fixture = @setup_physics_for_polygon(a)
+        fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
 
    toggle_debug: () ->
      if @debug?
