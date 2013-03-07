@@ -100,20 +100,22 @@ calc_game_object_bounds = (game_object) ->
       guid_a = contact.GetFixtureA().GetBody().GetUserData()
       guid_b = contact.GetFixtureB().GetBody().GetUserData()
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
-        a = @game_objects[guid_a]
-        b = @game_objects[guid_b]
+        # Sort the objects. This eliminates duplicate logic below
+        if @game_objects[guid_a].constructor.name < @game_objects[guid_b].constructor.name
+          a = @game_objects[guid_a]
+          b = @game_objects[guid_b]
+        else
+          a = @game_objects[guid_b]
+          b = @game_objects[guid_a]
 
-        # Dont care about two bullets
         if a.constructor.name == b.constructor.name == "Bullet"
           contact.SetEnabled(false)
 
         # ignore contacts between player and his own bullets
         if b instanceof Player && a instanceof Bullet && a.source_object_guid == b.guid
           contact.SetEnabled(false)
-        else if a instanceof Player && b instanceof Bullet && b.source_object_guid == a.guid
-          contact.SetEnabled(false)
 
-        if a.invuln_ticks || b.invuln_ticks
+        if a instanceof Asteroid && a.invuln_ticks && b instanceof Player
           contact.SetEnabled(false)
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
@@ -380,15 +382,15 @@ calc_game_object_bounds = (game_object) ->
 
       time_since_last_spawn = _.now() - @prev_spawn_time
       min_delay = if @total_game_time < 15000
-        6000
+        60000
       else if @total_game_time < 25000
-        4000
+        40000
       else if @total_game_time < 35000
-        3000
+        30000
       else if @total_game_time < 40000
-        750
+        7500
       else
-        350
+        3500
 
       if time_since_last_spawn > min_delay
         console.log "Spawning enemy!"
