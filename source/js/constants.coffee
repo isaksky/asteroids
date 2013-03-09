@@ -16,3 +16,21 @@ def_enums = (() =>
 
 # IMPORTANT!! : Keep these in alphabetical order. The collision detection functions depend on it.
 def_enums "ASTEROID", "BULLET", "PARTICLE", "SHIP"
+
+# How much space is there beyond the edge of the screen?
+# We dont want objects to just wrap before they have completely dissapeared
+# Find the biggest radius for all objects, and use that :
+# unless body.m_max_radius?
+#   body.m_max_radius = @game_objects[body.GetUserData()].radius
+# unless body.m_max_radius? # probably polygon then
+#   vertices = body.GetFixtureList()?.GetShape()?.GetVertices()
+#   body.m_max_radius = _.max _.map(vertices, (v) -> Math.sqrt(v.x * v.x + v.y * v.y))
+
+# @global_max_radius ||= 0
+# @global_max_radius = Math.max(@global_max_radius, body.m_max_radius)
+# window.gm = @global_max_radius
+#offset = body.m_max_radius
+
+# flipping with an offset based on the object causes problems with unnatural collisions
+# around the edges, so just keep fixed for all objects.
+@EDGE_OFFSET = 1.18 # this is the max radius i've observed using the logic above.

@@ -10,68 +10,6 @@ b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
-@get_guid = (() ->
-  guid_idx = 0
-  (() ->
-    guid_idx += 1
-    "#{guid_idx}"))()
-
-random_polygon_points = (radius, num_sides) ->
-  angle_step = Math.PI * 2 / num_sides
-  points = []
-  angle = - (Math.PI / 2) #0 #angle_step
-  for n in [1..num_sides]
-    angle_adj = 0.2 * _.random(-angle_step, angle_step)
-    radius_adj = 0.20 * _.random(-radius, radius)
-    point =
-      x: Math.cos(angle + angle_adj) * (radius + radius_adj)
-      y: Math.sin(angle + angle_adj) * (radius + radius_adj)
-    points.push(point)
-    angle += angle_step
-  points
-
-create_particle = (radius, x, y) ->
-  particle =
-    type    : PARTICLE
-    x       : x
-    y       : y
-    radius  : radius
-    hp      : 1
-  particle.mass = radius / 100
-  particle.guid = get_guid()
-  particle.start_time = _.now()
-  particle
-
-create_ship = (x,y) ->
-  ship = {type: SHIP, x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0}
-  ship.guid = get_guid()
-  ship.points = [
-      {x: 0.75, y: 0}
-      #{x: 0.15, y: 1}
-      {x: 0, y: 0.25}
-      #{x: -0.15, y: 0}
-      {x: 0, y: -0.25}
-      #{x:0.5, y:-1}
-    ]
-  ship
-
-BULLET_COLORS = ["rgba(233, 244, 0, 0)", "rgba(233, 0, 0, 0)", "rgba(0, 244, 0, 0)", "rgba(0, 0, 255, 0)"]
-
-create_bullet = (radius, x, y, source_object_guid) ->
-  bullet = {type: BULLET, radius, x, y, source_object_guid, hp: 1, mass : radius}
-  bullet.guid = get_guid()
-  bullet.start_time = _.now()
-  bullet.color = _.random(BULLET_COLORS)
-  bullet
-
-ASTEROID_COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
-
-create_asteroid = (points, x, y, invuln_ticks = 0) ->
-  asteroid = {type: ASTEROID, points, x, y, invuln_ticks, hp: 100}
-  asteroid.guid = get_guid()
-  asteroid.color = _.random(ASTEROID_COLORS)
-  asteroid
-
 calc_game_object_bounds = (game_object) ->
   return if game_object.min_x?
   if game_object.points?
@@ -80,10 +18,8 @@ calc_game_object_bounds = (game_object) ->
       game_object.max_x = p.x if !game_object.max_x? || p.x > game_object.max_x
       game_object.min_y = p.y if !game_object.min_y? || p.y < game_object.min_y
       game_object.max_y = p.y if !game_object.max_y? || p.y > game_object.max_y
-  else if game_object.radius?
-    throw new Error("not implemented")
   else
-    throw new Error("Dont know how to calculate bounds for #{game_object.constructor.name}")
+    throw new Error("Dont know how to calculate bounds for #{game_object.type}")
 
 @game = Sketch.create
   container : document.getElementById "container"
@@ -179,50 +115,6 @@ calc_game_object_bounds = (game_object) ->
 
     @world.SetContactListener(listener)
 
-  # add_world_boundaries : ->
-  #   fix_def = new b2FixtureDef
-  #   fix_def.density = 1.0
-  #   fix_def.friction = 0.5
-  #   fix_def.restitution = 0.2
-
-  #   #bottom
-  #   edge_padding = 0.05
-  #   body_def = new b2BodyDef
-  #   body_def.type = b2Body.b2_staticBody
-  #   body_def.position.x = @width / 2 / SCALE
-  #   body_def.position.y = (@height / SCALE)
-  #   fix_def.shape = new b2PolygonShape
-  #   fix_def.shape.SetAsBox((@width / SCALE) / 2, edge_padding)
-  #   @world.CreateBody(body_def).CreateFixture(fix_def)
-
-  #   #top
-  #   edge_padding = 0.05
-  #   body_def = new b2BodyDef
-  #   body_def.type = b2Body.b2_staticBody
-  #   body_def.position.x = @width / 2 / SCALE
-  #   body_def.position.y = 0
-  #   fix_def.shape = new b2PolygonShape
-  #   fix_def.shape.SetAsBox((@width / SCALE) / 2, edge_padding)
-  #   @world.CreateBody(body_def).CreateFixture(fix_def)
-
-  #   #right
-  #   body_def = new b2BodyDef
-  #   body_def.type = b2Body.b2_staticBody
-  #   body_def.position.x = @width / SCALE
-  #   body_def.position.y = (@height / SCALE) / 2
-  #   fix_def.shape = new b2PolygonShape
-  #   fix_def.shape.SetAsBox(edge_padding, @height / SCALE / 2)
-  #   @world.CreateBody(body_def).CreateFixture(fix_def)
-
-  #   #left
-  #   body_def = new b2BodyDef
-  #   body_def.type = b2Body.b2_staticBody
-  #   body_def.position.x = 0
-  #   body_def.position.y = (@height / SCALE) / 2
-  #   fix_def.shape = new b2PolygonShape
-  #   fix_def.shape.SetAsBox(edge_padding, @height / SCALE / 2)
-  #   @world.CreateBody(body_def).CreateFixture(fix_def)
-
   setup_physics_for_polygon: (game_object) ->
     fix_def = new b2FixtureDef
     fix_def.density = 1.0
@@ -273,33 +165,18 @@ calc_game_object_bounds = (game_object) ->
     @setup_physics_for_bullet(bullet)
     @player.fire_juice -= radius * 50
 
-  wrap_objects : (body) ->
-    # unless body.m_max_radius?
-    #   body.m_max_radius = @game_objects[body.GetUserData()].radius
-    # unless body.m_max_radius? # probably polygon then
-    #   vertices = body.GetFixtureList()?.GetShape()?.GetVertices()
-    #   body.m_max_radius = _.max _.map(vertices, (v) -> Math.sqrt(v.x * v.x + v.y * v.y))
-
-    # @global_max_radius ||= 0
-    # @global_max_radius = Math.max(@global_max_radius, body.m_max_radius)
-    # window.gm = @global_max_radius
-    #offset = body.m_max_radius
-
-    offset = 1.18 # this is the max radius i've observed using the logic above.
-    # flipping with an offset based on the object causes problems with unnatural collisions
-    # around the edges, so just keep fixed for all objects.
+  # wrap object to other side of screen if its not on screen
+  wrap_object : (body) ->
     pos = body.GetPosition()
+    if pos.x > @width / SCALE + EDGE_OFFSET
+      new_x = -EDGE_OFFSET
+    else if pos.x < 0 - EDGE_OFFSET
+      new_x = @width / SCALE + EDGE_OFFSET
 
-    new_x = new_y = null
-    if pos.x > @width / SCALE + offset
-      new_x = -offset
-    else if pos.x < 0 - offset
-      new_x = @width / SCALE + offset
-
-    if pos.y > @height / SCALE + offset
-      new_y = -offset
-    else if pos.y < 0 - offset
-      new_y = @height / SCALE + offset
+    if pos.y > @height / SCALE + EDGE_OFFSET
+      new_y = -EDGE_OFFSET
+    else if pos.y < 0 - EDGE_OFFSET
+      new_y = @height / SCALE + EDGE_OFFSET
 
     if new_x? || new_y?
       new_x = pos.x unless new_x?
@@ -347,8 +224,6 @@ calc_game_object_bounds = (game_object) ->
       @gas(@player, @player_body, false)
     if @keys.DOWN
       @gas(@player, @player_body, true)
-      # pow = 0.1
-      # @player_body.ApplyImpulse(new b2Vec2(-Math.cos(@player.angle) * pow, -Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
     if @keys.LEFT
       @player_body.ApplyTorque(-0.2)
     if @keys.RIGHT
@@ -384,7 +259,7 @@ calc_game_object_bounds = (game_object) ->
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
-          @wrap_objects(body)
+          @wrap_object(body)
           _.merge game_object,
             x : pos.x
             y : pos.y
