@@ -72,9 +72,11 @@ calc_game_object_bounds = (game_object) ->
         else
           a = @game_objects[guid_b]
           b = @game_objects[guid_a]
-        #console.log "Collision between #{a.constructor.name} and #{b.constructor.name}"
 
         if a.type == b.type == BULLET
+          contact.SetEnabled(false)
+
+        if a.type == BULLET && b.type == PARTICLE
           contact.SetEnabled(false)
 
         # ignore contacts between player and his own bullets
@@ -98,6 +100,8 @@ calc_game_object_bounds = (game_object) ->
         else
           a = @game_objects[guid_b]
           b = @game_objects[guid_a]
+
+        #console.log "Collision between #{a.type} and #{b.type}"
 
         if a.type == ASTEROID && b.type == BULLET
           a.hp -= force
