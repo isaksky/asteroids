@@ -7,4 +7,17 @@ _.mixin
       min = 0
     return min + Math.random() * (max - min)
 
-  now : Date.now || (new Date).getTime
+  now : Date.now || () -> (new Date).getTime()
+
+  merge : (target, source) ->
+    for k, v of source
+      target[k] = v
+    target
+
+  each_unique_pair : (ary, fn) ->
+    for i in [0...(ary.length - 1)]
+      e1 = ary[i]
+      for j in [(i+1)...ary.length]
+        e2 = ary[j]
+        fn(e1, e2)
+    null

@@ -33,7 +33,7 @@ drawing =
     ctx.stroke()
     ctx.restore()
 
-  draw_player : (ctx, player) ->
+  draw_ship : (ctx, player) ->
     inner_circle_size = 0.0  * SCALE
     gradient_size = 0.5 * SCALE
     x = player.x * SCALE + (player.max_x / 3 * SCALE) * Math.cos(player.angle)

@@ -32,7 +32,7 @@ random_polygon_points = (radius, num_sides) ->
 
 create_particle = (radius, x, y) ->
   particle =
-    type    : particle
+    type    : PARTICLE
     x       : x
     y       : y
     radius  : radius
@@ -42,13 +42,35 @@ create_particle = (radius, x, y) ->
   particle.start_time = _.now()
   particle
 
-# @wake_all = () ->
-#   b = world.GetBodyList()
-#   while true
-#     break unless b?
-#     if b.GetUserData()?
-#       b.SetAwake(true)
-#     b = b.m_next
+create_ship = (x,y) ->
+  ship = {type: SHIP, x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0}
+  ship.guid = get_guid()
+  ship.points = [
+      {x: 0.75, y: 0}
+      #{x: 0.15, y: 1}
+      {x: 0, y: 0.25}
+      #{x: -0.15, y: 0}
+      {x: 0, y: -0.25}
+      #{x:0.5, y:-1}
+    ]
+  ship
+
+BULLET_COLORS = ["rgba(233, 244, 0, 0)", "rgba(233, 0, 0, 0)", "rgba(0, 244, 0, 0)", "rgba(0, 0, 255, 0)"]
+
+create_bullet = (radius, x, y, source_object_guid) ->
+  bullet = {type: BULLET, radius, x, y, source_object_guid, hp: 1, mass : radius}
+  bullet.guid = get_guid()
+  bullet.start_time = _.now()
+  bullet.color = _.random(BULLET_COLORS)
+  bullet
+
+ASTEROID_COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
+
+create_asteroid = (points, x, y, invuln_ticks = 0) ->
+  asteroid = {type: ASTEROID, points, x, y, invuln_ticks, hp: 100}
+  asteroid.guid = get_guid()
+  asteroid.color = _.random(ASTEROID_COLORS)
+  asteroid
 
 calc_game_object_bounds = (game_object) ->
   return if game_object.min_x?
@@ -63,7 +85,7 @@ calc_game_object_bounds = (game_object) ->
   else
     throw new Error("Dont know how to calculate bounds for #{game_object.constructor.name}")
 
-@sketch = Sketch.create
+@game = Sketch.create
   container : document.getElementById "container"
   max_pixels : 1280 * 800
   setup : ->
@@ -74,10 +96,11 @@ calc_game_object_bounds = (game_object) ->
     num_asteroids = Math.floor(@height * @width * ASTEROIDS_PER_PIXEL)
     for n in [1..num_asteroids]
       random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-      asteroid = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE))
+      asteroid = create_asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE))
       @game_objects[asteroid.guid] = asteroid
 
-    @player = new Player(@width / SCALE / 2, @height / SCALE / 2)
+    @player = create_ship(@width / SCALE / 2, @height / SCALE / 2)
+    @player.is_player = true
     calc_game_object_bounds(@player)
 
     window.player = @player
@@ -91,9 +114,9 @@ calc_game_object_bounds = (game_object) ->
     for guid, game_object of @game_objects
       #continue unless po?.points?
       fixture = @setup_physics_for_polygon game_object
-      if game_object instanceof Asteroid
+      if game_object.type == ASTEROID
         fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
-      if game_object instanceof Player
+      if game_object.is_player
         window.player_body = @player_body = fixture.GetBody()
         @player_body.SetAngularDamping(2.5)
         @player_body.SetLinearDamping(1)
@@ -107,7 +130,7 @@ calc_game_object_bounds = (game_object) ->
       guid_b = contact.GetFixtureB().GetBody().GetUserData()
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
         # Sort the objects. This eliminates duplicate logic below
-        if @game_objects[guid_a].constructor.name < @game_objects[guid_b].constructor.name
+        if @game_objects[guid_a].type < @game_objects[guid_b].type
           a = @game_objects[guid_a]
           b = @game_objects[guid_b]
         else
@@ -115,14 +138,14 @@ calc_game_object_bounds = (game_object) ->
           b = @game_objects[guid_a]
         #console.log "Collision between #{a.constructor.name} and #{b.constructor.name}"
 
-        if a.constructor.name == b.constructor.name == "Bullet"
+        if a.type == b.type == BULLET
           contact.SetEnabled(false)
 
         # ignore contacts between player and his own bullets
-        if b instanceof Player && a instanceof Bullet && a.source_object_guid == b.guid
+        if b.is_player && a.type == BULLET && a.source_object_guid == b.guid
           contact.SetEnabled(false)
 
-        if a instanceof Asteroid && a.invuln_ticks && b instanceof Player
+        if a.type == ASTEROID && a.invuln_ticks && b.is_player
           contact.SetEnabled(false)
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
@@ -133,26 +156,26 @@ calc_game_object_bounds = (game_object) ->
       guid_b = contact.GetFixtureB().GetBody().GetUserData()
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
         #Sort the objects. This eliminates duplicate logic below
-        if @game_objects[guid_a].constructor.name < @game_objects[guid_b].constructor.name
+        if @game_objects[guid_a].type < @game_objects[guid_b].type
           a = @game_objects[guid_a]
           b = @game_objects[guid_b]
         else
           a = @game_objects[guid_b]
           b = @game_objects[guid_a]
 
-        if a instanceof Asteroid && b instanceof Bullet
+        if a.type == ASTEROID && b.type == BULLET
           a.hp -= force
           b.hp = 0
-        else if a instanceof Asteroid && b instanceof Asteroid
+        else if a.type == ASTEROID && b.type == ASTEROID
           a.hp -= force
           b.hp -= force
-        else if a instanceof Asteroid && b instanceof Player
+        else if a.type == ASTEROID && b.is_player
           #console.log "A-P force : #{force}"
           if force > 0.25 # so player can push shit around without getting hurt
             a.hp -= force
             b.hp -= force
-        # else if b instanceof Player && (a instanceof Bullet && a.source_object_guid == b.guid)
-        #   a.hp -= force
+          else if b.is_player && (a.type == BULLET && a.source_object_guid == b.guid)
+            a.hp -= force
 
     @world.SetContactListener(listener)
 
@@ -245,7 +268,7 @@ calc_game_object_bounds = (game_object) ->
     x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
     y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
     #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    bullet = new Bullet(radius, x, y, @player.guid)
+    bullet = create_bullet(radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     @setup_physics_for_bullet(bullet)
     @player.fire_juice -= radius * 50
@@ -295,7 +318,7 @@ calc_game_object_bounds = (game_object) ->
     x = game_object.x + (offset + radius) * Math.cos(angle + PI % TWO_PI)
     y = game_object.y + (offset + radius) * Math.sin(angle + PI % TWO_PI)
     #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    particle = new Particle(radius, x, y)
+    particle = create_particle(radius, x, y)
     @game_objects[particle.guid] = particle
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
@@ -354,25 +377,24 @@ calc_game_object_bounds = (game_object) ->
           @world.DestroyBody(body)
           @finished = true if game_object == @player
 
-        else if game_object instanceof Bullet && (_.now() - game_object.start_time) > 1400
+        else if game_object.type == BULLET && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)
           @world.DestroyBody(body)
-        else if game_object instanceof Particle && (_.now() - game_object.start_time) > MAX_PARTICLE_AGE
+        else if game_object.type == PARTICLE && (_.now() - game_object.start_time) > MAX_PARTICLE_AGE
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
           @wrap_objects(body)
-          state =
+          _.merge game_object,
             x : pos.x
             y : pos.y
             angle : body.GetAngle()
-          game_object.update(state)
-      @asteroids_remaining += 1 if game_object instanceof Asteroid
+      @asteroids_remaining += 1 if game_object.type == ASTEROID
       game_object.invuln_ticks -= 1 if game_object.invuln_ticks
       body = body.m_next
 
       for o in graveyard
-        @score += 50 if o instanceof Asteroid
+        @score += 50 if o.type == ASTEROID
         delete @game_objects[o.guid]
 
     if @asteroids_remaining == 0
@@ -399,7 +421,7 @@ calc_game_object_bounds = (game_object) ->
       console.log "Spawning enemy!"
       @prev_spawn_time = _.now()
       random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-      a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
+      a = create_asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
       @game_objects[a.guid] = a
       fixture = @setup_physics_for_polygon(a)
       fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
@@ -439,7 +461,8 @@ calc_game_object_bounds = (game_object) ->
   draw : () ->
     return if @debug
     for key, game_object of @game_objects
-      drawing["draw_#{game_object.constructor.name.toLowerCase()}"](this, game_object)
+      game_object_type_name = ENUM_NAME_BY_TYPE[game_object.type]
+      drawing["draw_#{game_object_type_name}"](this, game_object)
 
     @draw_hp_bar()
     @draw_fire_juice_bar()
