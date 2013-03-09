@@ -114,8 +114,8 @@ calc_game_object_bounds = (game_object) ->
           if force > 0.25 # so player can push shit around without getting hurt
             a.hp -= force
             b.hp -= force
-          else if b.is_player && (a.type == BULLET && a.source_object_guid == b.guid)
-            a.hp -= force
+        else if b.is_player && (a.type == BULLET && a.source_object_guid == b.guid)
+          a.hp -= force
 
     @world.SetContactListener(listener)
 
