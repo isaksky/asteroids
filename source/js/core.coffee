@@ -10,11 +10,6 @@ b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
-@SCALE = 60#(innerWidth * innerHeight) * 60  / (1280 * 800)
-Player.MAX_FIRE_JUICE = 150
-ASTEROIDS_PER_PIXEL = 15 / (800 * 600)
-SMALLEST_BULLET_RADIUS = 0.05
-
 @get_guid = (() ->
   guid_idx = 0
   (() ->
@@ -35,13 +30,25 @@ random_polygon_points = (radius, num_sides) ->
     angle += angle_step
   points
 
-@wake_all = () ->
-  b = world.GetBodyList()
-  while true
-    break unless b?
-    if b.GetUserData()?
-      b.SetAwake(true)
-    b = b.m_next
+create_particle = (radius, x, y) ->
+  particle =
+    type    : particle
+    x       : x
+    y       : y
+    radius  : radius
+    hp      : 1
+  particle.mass = radius / 100
+  particle.guid = get_guid()
+  particle.start_time = _.now()
+  particle
+
+# @wake_all = () ->
+#   b = world.GetBodyList()
+#   while true
+#     break unless b?
+#     if b.GetUserData()?
+#       b.SetAwake(true)
+#     b = b.m_next
 
 calc_game_object_bounds = (game_object) ->
   return if game_object.min_x?
@@ -60,8 +67,7 @@ calc_game_object_bounds = (game_object) ->
   container : document.getElementById "container"
   max_pixels : 1280 * 800
   setup : ->
-    @total_game_time = 0
-    @score = 0
+    @score = @num_update_ticks = 0
     @finished = false
     @prev_spawn_time = _.now()
     @game_objects = {}
@@ -107,6 +113,7 @@ calc_game_object_bounds = (game_object) ->
         else
           a = @game_objects[guid_b]
           b = @game_objects[guid_a]
+        #console.log "Collision between #{a.constructor.name} and #{b.constructor.name}"
 
         if a.constructor.name == b.constructor.name == "Bullet"
           contact.SetEnabled(false)
@@ -125,26 +132,27 @@ calc_game_object_bounds = (game_object) ->
       guid_a = contact.GetFixtureA().GetBody().GetUserData()
       guid_b = contact.GetFixtureB().GetBody().GetUserData()
       if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
-        a = @game_objects[guid_a]
-        b = @game_objects[guid_b]
+        #Sort the objects. This eliminates duplicate logic below
+        if @game_objects[guid_a].constructor.name < @game_objects[guid_b].constructor.name
+          a = @game_objects[guid_a]
+          b = @game_objects[guid_b]
+        else
+          a = @game_objects[guid_b]
+          b = @game_objects[guid_a]
 
         if a instanceof Asteroid && b instanceof Bullet
           a.hp -= force
-        else if a instanceof Asteroid
-          a.hp -= force
-        else if a instanceof Bullet
-          a.hp = 0
-        else if a instanceof Player && !(b instanceof Bullet && b.source_object_guid == a.guid)
-          a.hp -= force
-
-        if b instanceof Asteroid && a instanceof Bullet
-          b.hp -= force
-        else if b instanceof Asteroid
-          b.hp -= force
-        else if b instanceof Bullet
           b.hp = 0
-        else if b instanceof Player && !(a instanceof Bullet && a.source_object_guid == b.guid)
+        else if a instanceof Asteroid && b instanceof Asteroid
+          a.hp -= force
           b.hp -= force
+        else if a instanceof Asteroid && b instanceof Player
+          #console.log "A-P force : #{force}"
+          if force > 0.25 # so player can push shit around without getting hurt
+            a.hp -= force
+            b.hp -= force
+        # else if b instanceof Player && (a instanceof Bullet && a.source_object_guid == b.guid)
+        #   a.hp -= force
 
     @world.SetContactListener(listener)
 
@@ -191,6 +199,7 @@ calc_game_object_bounds = (game_object) ->
   #   fix_def.shape = new b2PolygonShape
   #   fix_def.shape.SetAsBox(edge_padding, @height / SCALE / 2)
   #   @world.CreateBody(body_def).CreateFixture(fix_def)
+
   setup_physics_for_polygon: (game_object) ->
     fix_def = new b2FixtureDef
     fix_def.density = 1.0
@@ -212,7 +221,7 @@ calc_game_object_bounds = (game_object) ->
     #console.log guid
     return @world.CreateBody(body_def).CreateFixture(fix_def)
 
-  physics_add_body_for_bullet: (bullet) ->
+  setup_physics_for_bullet: (bullet) ->
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
     fix_def = new b2FixtureDef
@@ -238,7 +247,7 @@ calc_game_object_bounds = (game_object) ->
     #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     bullet = new Bullet(radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
-    @physics_add_body_for_bullet(bullet)
+    @setup_physics_for_bullet(bullet)
     @player.fire_juice -= radius * 50
 
   wrap_objects : (body) ->
@@ -308,9 +317,8 @@ calc_game_object_bounds = (game_object) ->
 
   update : ->
     return if @finished
-    @total_game_time += @millis || 0
     @player.fire_juice += 1.5
-    @player.fire_juice = Player.MAX_FIRE_JUICE if @player.fire_juice > Player.MAX_FIRE_JUICE #Math.min(@player.fire_juice, 100)
+    @player.fire_juice = MAX_PLAYER_FIRE_JUICE if @player.fire_juice > MAX_PLAYER_FIRE_JUICE #Math.min(@player.fire_juice, 100)
 
     if @keys.UP
       @gas(@player, @player_body, false)
@@ -349,7 +357,7 @@ calc_game_object_bounds = (game_object) ->
         else if game_object instanceof Bullet && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)
           @world.DestroyBody(body)
-        else if game_object instanceof Particle && (_.now() - game_object.start_time) > Particle.MAX_AGE
+        else if game_object instanceof Particle && (_.now() - game_object.start_time) > MAX_PARTICLE_AGE
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
@@ -371,35 +379,30 @@ calc_game_object_bounds = (game_object) ->
       @finished = true
 
     @prev_update_millis = @millis
-    @spawn_enemies_tick()
+    @spawn_enemies_tick() if @num_update_ticks % 20 == 1
+    @num_update_ticks += 1
 
   spawn_enemies_tick: () ->
-    @spawns_by_time ||= {}
-    time_interval = Math.floor(@total_game_time / 1000) * 1000
+    time_since_last_spawn = _.now() - @prev_spawn_time
+    min_delay = if @millis < 15000
+      60000
+    else if @millis < 25000
+      40000
+    else if @millis < 35000
+      30000
+    else if @millis < 40000
+      7500
+    else
+      3500
 
-    if !@spawns_by_time[time_interval]?
-      @spawns_by_time[time_interval] = true
-
-      time_since_last_spawn = _.now() - @prev_spawn_time
-      min_delay = if @total_game_time < 15000
-        60000
-      else if @total_game_time < 25000
-        40000
-      else if @total_game_time < 35000
-        30000
-      else if @total_game_time < 40000
-        7500
-      else
-        3500
-
-      if time_since_last_spawn > min_delay
-        console.log "Spawning enemy!"
-        @prev_spawn_time = _.now()
-        random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-        a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
-        @game_objects[a.guid] = a
-        fixture = @setup_physics_for_polygon(a)
-        fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
+    if time_since_last_spawn > min_delay
+      console.log "Spawning enemy!"
+      @prev_spawn_time = _.now()
+      random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+      a = new Asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
+      @game_objects[a.guid] = a
+      fixture = @setup_physics_for_polygon(a)
+      fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
 
    toggle_debug: () ->
      if @debug?
@@ -415,20 +418,30 @@ calc_game_object_bounds = (game_object) ->
       debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
       @world.SetDebugDraw(debugDraw)
 
-  draw_fire_juice_bar : ->
+  draw_hp_bar : ->
     bar_w = 100
-    bar_h = 15
-    @strokeStyle = "#63D1F4"
+    bar_h = 6
+    @strokeStyle = "#cd5c5c"
     @strokeRect(10, 10, bar_w, bar_h)
 
+    @fillStyle = "#cd5c5c"
+    @fillRect(10, 10, (@player.hp / @player.max_hp) * bar_w,  bar_h)
+
+  draw_fire_juice_bar : ->
+    bar_w = 100
+    bar_h = 6
+    @strokeStyle = "#63D1F4"
+    @strokeRect(10, 20, bar_w, bar_h)
+
     @fillStyle = "#63D1F4"
-    @fillRect(10, 10, (@player.fire_juice / Player.MAX_FIRE_JUICE) * bar_w,  bar_h)
+    @fillRect(10, 20, (@player.fire_juice / MAX_PLAYER_FIRE_JUICE) * bar_w,  bar_h)
 
   draw : () ->
     return if @debug
     for key, game_object of @game_objects
-      game_object.draw(@)
+      drawing["draw_#{game_object.constructor.name.toLowerCase()}"](this, game_object)
 
+    @draw_hp_bar()
     @draw_fire_juice_bar()
 
     @textAlign = "right"
