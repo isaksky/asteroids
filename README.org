@@ -1,11 +1,11 @@
 * Yo
 This is a middleman project.
 
-#+begin_src
+#+begin_src bash
 gem install middleman
 #+end_src
 
-#+begin_src
+#+begin_src bash
 middleman server -p 3000
 #+end_src
 Navigate to localhost:3000 to check it out.
