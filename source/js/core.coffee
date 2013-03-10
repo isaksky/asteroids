@@ -14,6 +14,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
   container : document.getElementById "container"
   max_pixels : 1280 * 800
   setup : ->
+    @jerk_charge_duration = JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
     @score = @num_update_ticks = 0
     @finished = false
     @prev_spawn_time = _.now()
@@ -237,7 +238,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
     if jerk.current_charge_start
       @gas(jerk, jerk_body, false, 0.07)
-      if _.now() - jerk.current_charge_start > JERK_CHARGE_DURATION
+      if _.now() - jerk.current_charge_start > @jerk_charge_duration
         jerk.current_charge_start = null
     else if is_off_screen
       @gas(jerk, jerk_body, false, 0.07)

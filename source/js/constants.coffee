@@ -40,4 +40,4 @@ POINTS_BY_TYPE[JERK] = 500
 @EDGE_OFFSET = 1.18 # this is the max radius i've observed using the logic above.
 
 @JERK_AIM_TIME = 60
-@JERK_CHARGE_DURATION = 1250
+@JERK_CHARGE_DURATION_PIXEL_COEFF = 1250 / (800 * 600)
