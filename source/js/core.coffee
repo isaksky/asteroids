@@ -72,7 +72,8 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
         if b.is_player && a.type == BULLET && a.source_object_guid == b.guid
           contact.SetEnabled(false)
 
-        if a.type == ASTEROID && a.invuln_ticks && b.is_player
+        # player can't crash into invuln asteroid or jerk
+        if (a.type == ASTEROID || a.type == JERK) && a.invuln_ticks && b.is_player
           contact.SetEnabled(false)
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
@@ -342,7 +343,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
       else #if !@have_jerk
         #@have_jerk = true
         console.log "Spawning jerk!"
-        jerk = create_jerk(@random_x_coord(), @random_y_coord())
+        jerk = create_jerk(@random_x_coord(), @random_y_coord(), 60)
         @game_objects[jerk.guid] = jerk
         fixture = @setup_physics_for_polygon(jerk)
         fixture.GetBody().SetAngularDamping(4.5)

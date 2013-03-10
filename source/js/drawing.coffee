@@ -70,6 +70,7 @@ drawing =
     ctx.restore()
 
   draw_jerk : (ctx, jerk) ->
+    return if jerk.invuln_ticks % 8 > 3
     x = jerk.x * SCALE + (jerk.max_x / 3 * SCALE) * Math.cos(jerk.angle)
     y = jerk.y * SCALE + (jerk.max_x / 3 * SCALE) * Math.sin(jerk.angle)
     ctx.save()
