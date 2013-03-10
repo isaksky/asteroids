@@ -97,7 +97,7 @@ drawing =
       ctx.beginPath()
       ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
       gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
-      gradient.addColorStop(0, "rgba(255, 0, 0, #{pct_charged * 0.25})")
+      gradient.addColorStop(0, "rgba(255, 0, 0, #{pct_charged * 0.75})")
       gradient.addColorStop(1, "rgba(255, 0, 0, 0)")
       ctx.fillStyle = gradient
       ctx.closePath()
