@@ -1,2 +1,8 @@
 * Yo
-hey man
+This is a middleman project.
+
+src_bash{gem install middleman}
+then
+src_bash{middleman server -p 3000}
+
+Main logic is in /source/js/core.coffee
