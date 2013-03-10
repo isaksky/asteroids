@@ -1,8 +1,13 @@
 * Yo
 This is a middleman project.
 
-src_bash{gem install middleman}
-then
-src_bash{middleman server -p 3000}
+#+begin_src
+gem install middleman
+#+end_src
+
+#+begin_src
+middleman server -p 3000
+#+end_src
+Navigate to localhost:3000 to check it out.
 
 Main logic is in /source/js/core.coffee
