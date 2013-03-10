@@ -15,7 +15,11 @@ def_enums = (() =>
       enum_i += 1))()
 
 # IMPORTANT!! : Keep these in alphabetical order. The collision detection functions depend on it.
-def_enums "ASTEROID", "BULLET", "PARTICLE", "SHIP"
+def_enums "ASTEROID", "BULLET", "JERK", "PARTICLE", "SHIP"
+
+@POINTS_BY_TYPE = {}
+POINTS_BY_TYPE[ASTEROID] = 50
+POINTS_BY_TYPE[JERK] = 500
 
 # How much space is there beyond the edge of the screen?
 # We dont want objects to just wrap before they have completely dissapeared
@@ -34,3 +38,6 @@ def_enums "ASTEROID", "BULLET", "PARTICLE", "SHIP"
 # flipping with an offset based on the object causes problems with unnatural collisions
 # around the edges, so just keep fixed for all objects.
 @EDGE_OFFSET = 1.18 # this is the max radius i've observed using the logic above.
+
+@JERK_AIM_TIME = 60
+@JERK_CHARGE_DURATION = 1250

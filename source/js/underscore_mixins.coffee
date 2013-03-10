@@ -1,3 +1,6 @@
+TWO_PI = Math.PI * 2
+QUARTER_PI = Math.PI / 4
+
 _.mixin
   random : (min, max) ->
     if ( min && typeof min.length == 'number' && !!min.length )
@@ -21,3 +24,27 @@ _.mixin
         e2 = ary[j]
         fn(e1, e2)
     null
+
+  # Normalize the angle to be between -PI and PI
+  normalize_angle : (angle) ->
+    two_pi = TWO_PI
+    angle = angle % two_pi
+    angle = (angle + two_pi) % two_pi
+    if angle > Math.PI
+      angle -= two_pi
+    angle
+
+  # Normalize the angle to be between 0 and 2 PI
+  normalize_angle_pos : (angle) ->
+    angle = angle % TWO_PI
+    if angle < 0 || angle > TWO_PI
+      Math.abs(TWO_PI - Math.abs(angle))
+    else
+      angle
+
+  # Is a1 clockwise of a2?
+  is_clockwise_of : (a1, a2) ->
+    a1 = _.normalize_angle_pos(a1)
+    a2 = _.normalize_angle_pos(a2)
+    d =  _.normalize_angle(a1 - a2)
+    d >= 0

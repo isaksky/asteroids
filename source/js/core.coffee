@@ -10,17 +10,6 @@ b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
-calc_game_object_bounds = (game_object) ->
-  return if game_object.min_x?
-  if game_object.points?
-    for p in game_object.points
-      game_object.min_x = p.x if !game_object.min_x? || p.x < game_object.min_x
-      game_object.max_x = p.x if !game_object.max_x? || p.x > game_object.max_x
-      game_object.min_y = p.y if !game_object.min_y? || p.y < game_object.min_y
-      game_object.max_y = p.y if !game_object.max_y? || p.y > game_object.max_y
-  else
-    throw new Error("Dont know how to calculate bounds for #{game_object.type}")
-
 @game = Sketch.create
   container : document.getElementById "container"
   max_pixels : 1280 * 800
@@ -37,7 +26,6 @@ calc_game_object_bounds = (game_object) ->
 
     @player = create_ship(@width / SCALE / 2, @height / SCALE / 2)
     @player.is_player = true
-    calc_game_object_bounds(@player)
 
     window.player = @player
     @game_objects[@player.guid] = @player
@@ -116,6 +104,11 @@ calc_game_object_bounds = (game_object) ->
             b.hp -= force
         else if b.is_player && (a.type == BULLET && a.source_object_guid == b.guid)
           a.hp -= force
+        else if a.type == JERK && b.is_player
+          b.hp -= force
+        else if a.type == BULLET && b.type == JERK
+          b.hp -= force
+          a.hp = 0
 
     @world.SetContactListener(listener)
 
@@ -187,14 +180,12 @@ calc_game_object_bounds = (game_object) ->
       new_y = pos.y unless new_y?
       body.SetPosition(new b2Vec2(new_x, new_y))
 
-  gas : (game_object, physics_body, do_backwards) ->
+  gas : (game_object, physics_body, do_backwards, pow = 0.04) ->
     angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
-    pow = 0.04#if do_backwards then 0.02 else 0.04
     physics_body.ApplyImpulse(new b2Vec2(Math.cos(angle) * pow,
       Math.sin(angle) * pow), physics_body.GetWorldCenter())
 
     radius = 0.1
-    calc_game_object_bounds(game_object)
     offset = if do_backwards then game_object.max_x + 0.1 else game_object.min_x - 0.1
     x = game_object.x + (offset + radius) * Math.cos(angle + PI % TWO_PI)
     y = game_object.y + (offset + radius) * Math.sin(angle + PI % TWO_PI)
@@ -219,11 +210,7 @@ calc_game_object_bounds = (game_object) ->
     particle_body.ApplyImpulse(new b2Vec2(Math.cos(particle_angle) * pow,
       Math.sin(particle_angle) * pow), physics_body.GetWorldCenter())
 
-  update : ->
-    return if @finished
-    @player.fire_juice += 1.5
-    @player.fire_juice = MAX_PLAYER_FIRE_JUICE if @player.fire_juice > MAX_PLAYER_FIRE_JUICE #Math.min(@player.fire_juice, 100)
-
+  handle_keyboard_input : ->
     if @keys.UP
       @gas(@player, @player_body, false)
     if @keys.DOWN
@@ -239,6 +226,41 @@ calc_game_object_bounds = (game_object) ->
       if @player.fire_juice > 0
         @shoot_bullet 0.20
 
+  handle_jerk_ai : (jerk, jerk_body) ->
+    dx =  player.x - jerk.x
+    dy = player.y - jerk.y
+    attack_angle = _.normalize_angle(Math.atan2(dy, dx))
+    jerk_angle = jerk.angle
+    angle_diff = _.normalize_angle(jerk_angle - attack_angle)
+    console.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
+      angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
+    is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
+    if jerk.current_charge_start
+      @gas(jerk, jerk_body, false, 0.07)
+      if _.now() - jerk.current_charge_start > JERK_CHARGE_DURATION
+        jerk.current_charge_start = null
+    else if is_off_screen
+      @gas(jerk, jerk_body, false, 0.07)
+    else if Math.abs(angle_diff) < 0.05
+      jerk.aim += 1
+      if jerk.aim > JERK_AIM_TIME
+        jerk.current_charge_start = _.now()
+        console.log "ATTACK!"
+    else
+      jerk.aim = 0 if jerk.aim
+      # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
+      future_jerk_angle = jerk_angle + jerk_body.GetAngularVelocity() / 3.0
+      torque = if _.is_clockwise_of(attack_angle, future_jerk_angle) then 0.1 else -0.1
+      jerk_body.ApplyTorque(torque)
+
+
+  update : ->
+    return if @finished
+    @player.fire_juice += 1.5
+    @player.fire_juice = MAX_PLAYER_FIRE_JUICE if @player.fire_juice > MAX_PLAYER_FIRE_JUICE #Math.min(@player.fire_juice, 100)
+
+    @handle_keyboard_input()
+
     #bottom
     @world.Step(1 / 60, 10, 10)
     @world.DrawDebugData() if @debug
@@ -246,15 +268,17 @@ calc_game_object_bounds = (game_object) ->
 
     graveyard = []
     body = @world.GetBodyList()
-    @asteroids_remaining = 0
+    @enemies_remaining = 0
     while body?
       if body.GetUserData()?
         pos = body.GetPosition()
         game_object = @game_objects[body.GetUserData()]
         if game_object.hp <= 0
-          graveyard.push(game_object)
-          @world.DestroyBody(body)
-          @finished = true if game_object == @player
+          if game_object.is_player
+            @finished = true
+          else
+            graveyard.push(game_object)
+            @world.DestroyBody(body)
 
         else if game_object.type == BULLET && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)
@@ -268,42 +292,60 @@ calc_game_object_bounds = (game_object) ->
             x : pos.x
             y : pos.y
             angle : body.GetAngle()
-      @asteroids_remaining += 1 if game_object.type == ASTEROID
+          @handle_jerk_ai(game_object, body) if game_object.type == JERK
+      @enemies_remaining += 1 if game_object.type == ASTEROID || game_object.type == JERK
       game_object.invuln_ticks -= 1 if game_object.invuln_ticks
       body = body.m_next
 
-      for o in graveyard
-        @score += 50 if o.type == ASTEROID
-        delete @game_objects[o.guid]
+    for o in graveyard
+      point_value = POINTS_BY_TYPE[o.type]
+      @score += point_value if point_value?
+      delete @game_objects[o.guid]
 
-    if @asteroids_remaining == 0
+    if @enemies_remaining == 0
       @finished = true
 
     @prev_update_millis = @millis
     @spawn_enemies_tick() if @num_update_ticks % 20 == 1
     @num_update_ticks += 1
 
+  random_x_coord : () ->
+    random(@width / 10 / SCALE, (@width - @width / 10) / SCALE)
+
+  random_y_coord : ()->
+    _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE)
+
   spawn_enemies_tick: () ->
     time_since_last_spawn = _.now() - @prev_spawn_time
+    min_delay = 0
     min_delay = if @millis < 15000
-      60000
+      6000
     else if @millis < 25000
-      40000
+      4000
     else if @millis < 35000
-      30000
-    else if @millis < 40000
-      7500
+      3000
+    else if @millis < 60000
+      1500
     else
-      3500
+      500
 
     if time_since_last_spawn > min_delay
-      console.log "Spawning enemy!"
       @prev_spawn_time = _.now()
-      random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-      a = create_asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE), 60)
-      @game_objects[a.guid] = a
-      fixture = @setup_physics_for_polygon(a)
-      fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
+      if _.random() < 0.7
+        console.log "Spawning asteroid!"
+        random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+        a = create_asteroid(random_points, @random_x_coord(), @random_y_coord(), 60)
+        @game_objects[a.guid] = a
+        fixture = @setup_physics_for_polygon(a)
+        fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
+      else #if !@have_jerk
+        #@have_jerk = true
+        console.log "Spawning jerk!"
+        jerk = create_jerk(@random_x_coord(), @random_y_coord())
+        @game_objects[jerk.guid] = jerk
+        fixture = @setup_physics_for_polygon(jerk)
+        fixture.GetBody().SetAngularDamping(4.5)
+        fixture.GetBody().SetLinearDamping(1.5)
 
    toggle_debug: () ->
      if @debug?
@@ -354,7 +396,7 @@ calc_game_object_bounds = (game_object) ->
     if @finished
       @textAlign = "center"
       @font = "70px sans-serif"
-      if @asteroids_remaining == 0
+      if @enemies_remaining == 0
         @fillStyle = "#63D1F4"
         @fillText("YOU WIN", @width / 2 , @height / 2)
       else

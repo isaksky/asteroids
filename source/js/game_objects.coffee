@@ -1,3 +1,15 @@
+calc_game_object_bounds = (game_object) ->
+  return if game_object.min_x?
+  if game_object.points?
+    for p in game_object.points
+      game_object.min_x = p.x if !game_object.min_x? || p.x < game_object.min_x
+      game_object.max_x = p.x if !game_object.max_x? || p.x > game_object.max_x
+      game_object.min_y = p.y if !game_object.min_y? || p.y < game_object.min_y
+      game_object.max_y = p.y if !game_object.max_y? || p.y > game_object.max_y
+  else
+    throw new Error("Dont know how to calculate bounds for #{game_object.type}")
+
+
 get_guid = (() ->
   guid_idx = 0
   (() ->
@@ -41,6 +53,7 @@ get_guid = (() ->
       {x: 0, y: -0.25}
       #{x:0.5, y:-1}
     ]
+  calc_game_object_bounds(ship)
   ship
 
 BULLET_COLORS = ["rgba(233, 244, 0, 0)", "rgba(233, 0, 0, 0)", "rgba(0, 244, 0, 0)", "rgba(0, 0, 255, 0)"]
@@ -58,4 +71,20 @@ ASTEROID_COLORS = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   asteroid = {type: ASTEROID, points, x, y, invuln_ticks, hp: 100}
   asteroid.guid = get_guid()
   asteroid.color = _.random(ASTEROID_COLORS)
+  calc_game_object_bounds(asteroid)
   asteroid
+
+@create_jerk = (x, y, invuln_ticks = 0) ->
+  jerk = {type: JERK, x, y, invuln_ticks, aim: 0, current_charge_start: null}
+  jerk.guid = get_guid()
+  jerk.color = '#cd6090'
+  jerk.hp = jerk.max_hp = 50
+  jerk.points = [
+    {x: 1, y: 0}
+    {x: 0.6, y: 0.2}
+    {x: 0, y: 0.3}
+    {x: 0, y:-0.3}
+    {x: 0.6, y: -0.2}
+    ]
+  calc_game_object_bounds(jerk)
+  jerk
