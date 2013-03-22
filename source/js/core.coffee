@@ -75,6 +75,13 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
         # player can't crash into invuln asteroid or jerk
         if (a.type == ASTEROID || a.type == JERK) && a.invuln_ticks && b.is_player
           contact.SetEnabled(false)
+
+        if a.type == HEALTH_PACK || b.type == HEALTH_PACK
+          contact.SetEnabled(false)
+          if b.is_player
+            a.consume(b)
+            a.hp = 0
+
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
 
@@ -135,7 +142,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     #console.log guid
     return @world.CreateBody(body_def).CreateFixture(fix_def)
 
-  setup_physics_for_bullet: (bullet) ->
+  setup_circular_physics_body: (game_object) ->
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
     fix_def = new b2FixtureDef
@@ -143,12 +150,15 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     fix_def.friction = 0.5
     fix_def.restitution = 0.2
 
-    fix_def.shape = new b2CircleShape(bullet.radius)
+    fix_def.shape = new b2CircleShape(game_object.radius)
     fix_def.restitution = 0.4
-    body_def.position.x = bullet.x
-    body_def.position.y = bullet.y
-    body_def.userData = bullet.guid
-    bullet_body = @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+    body_def.position.x = game_object.x
+    body_def.position.y = game_object.y
+    body_def.userData = game_object.guid
+    @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+
+  setup_physics_for_bullet: (bullet) ->
+    bullet_body = @setup_circular_physics_body(bullet)
     pow = 0.1 * (bullet.radius / 0.05)
     pow *= 3 if bullet.radius > SMALLEST_BULLET_RADIUS
     bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
@@ -162,7 +172,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     bullet = create_bullet(radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     @setup_physics_for_bullet(bullet)
-    @player.fire_juice -= radius * 50
+    @player.fire_juice -= radius * 50 if radius > SMALLEST_BULLET_RADIUS
 
   # wrap object to other side of screen if its not on screen
   wrap_object : (body) ->
@@ -281,7 +291,11 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
           else
             graveyard.push(game_object)
             @world.DestroyBody(body)
-
+            if game_object.type == JERK && _.random() < 0.3
+              health_pack = create_health_pack(game_object.x, game_object.y)
+              @game_objects[health_pack.guid] = health_pack
+              health_pack_body = @setup_circular_physics_body(health_pack)
+              health_pack_body.SetLinearDamping(3)
         else if game_object.type == BULLET && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)
           @world.DestroyBody(body)

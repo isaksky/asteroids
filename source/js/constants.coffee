@@ -15,7 +15,7 @@ def_enums = (() =>
       enum_i += 1))()
 
 # IMPORTANT!! : Keep these in alphabetical order. The collision detection functions depend on it.
-def_enums "ASTEROID", "BULLET", "JERK", "PARTICLE", "SHIP"
+def_enums "ASTEROID", "BULLET", "HEALTH_PACK", "JERK", "PARTICLE", "SHIP"
 
 @POINTS_BY_TYPE = {}
 POINTS_BY_TYPE[ASTEROID] = 50
@@ -35,7 +35,7 @@ POINTS_BY_TYPE[JERK] = 500
 # window.gm = @global_max_radius
 #offset = body.m_max_radius
 
-# flipping with an offset based on the object causes problems with unnatural collisions
+# btw flipping with an offset based on the object causes problems with unnatural collisions
 # around the edges, so just keep fixed for all objects.
 @EDGE_OFFSET = 1.18 # this is the max radius i've observed using the logic above.
 

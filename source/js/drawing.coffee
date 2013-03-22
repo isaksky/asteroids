@@ -115,14 +115,20 @@ drawing =
 
     x = bullet.x * SCALE
     y = bullet.y * SCALE
-    inner_circle_size = SCALE * bullet.radius * 0.95
-    gradient_size = SCALE * bullet.radius * 2
+
     ctx.beginPath()
-    ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
-    gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
-    gradient.addColorStop(inner_circle_size / gradient_size, "rgba(255,255,255, 1)")
-    gradient.addColorStop(1, bullet.color) #'#69D2E7'
-    ctx.fillStyle = gradient
+    if bullet.radius > SMALLEST_BULLET_RADIUS
+      inner_circle_size = SCALE * bullet.radius * 0.95
+      gradient_size = SCALE * bullet.radius * 2
+      gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
+      gradient.addColorStop(inner_circle_size / gradient_size, "rgba(255,255,255, 1)")
+      gradient.addColorStop(1, bullet.color) #'#69D2E7'
+      ctx.fillStyle = gradient
+      ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
+    else
+      ctx.arc(x, y, bullet.radius * SCALE, 0, TWO_PI, true)
+      ctx.fillStyle = bullet.color
+
     ctx.closePath()
     ctx.fill()
     ctx.restore()
@@ -144,6 +150,20 @@ drawing =
     gradient.addColorStop(0.05, "rgba(255,255,255, #{0.7 * (1 - age / MAX_PARTICLE_AGE)})")
     gradient.addColorStop(1, "rgba(105, 210, 231, 0)") #'#69D2E7'
     ctx.fillStyle = gradient
+    ctx.fill()
+    ctx.restore()
+
+  draw_health_pack : (ctx, health_pack) ->
+    display_radius = SCALE * health_pack.radius # * (1 - age / MAX_PARTICLE_AGE)
+    ctx.save()
+    #ctx.rotate(dToR(circle.rotation+185))
+    #ctx.scale(1,1)
+    ctx.beginPath()
+    x = health_pack.x * SCALE
+    y = health_pack.y * SCALE
+    ctx.arc(x, y, display_radius, 0, TWO_PI, true)
+    ctx.closePath()
+    ctx.fillStyle = "rgba(255,0,0,0.6)"
     ctx.fill()
     ctx.restore()
 
