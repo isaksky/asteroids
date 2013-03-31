@@ -69,6 +69,7 @@ LEVEL_INTRO_TIME = 2500
 
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
+      JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.9)
       @level_idx += 1
       @prev_wave_spawned_by_level[@level_idx] = -1
       @level_start_time = _.now()
