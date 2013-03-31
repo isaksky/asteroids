@@ -10,43 +10,72 @@ b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
+LEVEL_INTRO_TIME = 2500
+
 @game = Sketch.create
   container : document.getElementById "container"
   max_pixels : 1280 * 800
   setup : ->
+    @waves_spawned_by_level = {}
     @jerk_charge_duration = JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
     @score = @num_update_ticks = 0
     @finished = false
     @prev_spawn_time = _.now()
     @game_objects = {}
-    num_asteroids = Math.floor(@height * @width * ASTEROIDS_PER_PIXEL)
-    for n in [1..num_asteroids]
-      random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-      asteroid = create_asteroid(random_points, random(@width / 10 / SCALE, (@width - @width / 10) / SCALE), _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE))
-      @game_objects[asteroid.guid] = asteroid
-
-    @player = create_ship(@width / SCALE / 2, @height / SCALE / 2)
-    @player.is_player = true
-
-    window.player = @player
-    @game_objects[@player.guid] = @player
 
     gravity = new b2Vec2(0, 0)#random(-0.5, 0.5), random(-0.5, 0.5))
     allow_sleep = true
     @world = new b2World(gravity, allow_sleep)
-    window.world = @world
 
-    for guid, game_object of @game_objects
-      #continue unless po?.points?
-      fixture = @setup_physics_for_polygon game_object
-      if game_object.type == ASTEROID
-        fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
-      if game_object.is_player
-        window.player_body = @player_body = fixture.GetBody()
-        @player_body.SetAngularDamping(2.5)
-        @player_body.SetLinearDamping(1)
+    @player = create_game_object[SHIP](@width / SCALE / 2, @height / SCALE / 2)
+    @player.is_player = true
+    window.player = @player
+    @game_objects[@player.guid] = @player
 
+    @player_body = @setup_physics_for_game_object(player)
+    @player_body.SetAngularDamping(2.5)
+    @player_body.SetLinearDamping(1)
+
+    @start_next_wave_or_level()
     @start_collision_detection()
+
+  start_next_wave_or_level : ->
+    @prev_wave_spawned_by_level ||= {}
+    unless @level_idx?
+      @level_idx = 0
+      @level_start_time = _.now()
+      @prev_wave_spawned_by_level[@level_idx] = -1
+
+    wave_found = false
+    for wave, wave_idx in levels[@level_idx].waves
+      if @prev_wave_spawned_by_level[@level_idx] < wave_idx
+        wave_found = true
+        break
+
+    if wave_found
+      _.log "Sending next wave!"
+      @prev_wave_spawned_by_level[@level_idx] = wave_idx
+      @wave_start_time = _.now()
+      for object_type_name, quantity of wave.spawns
+        object_type = window[object_type_name.toUpperCase()]
+        quantity = Math.ceil(quantity * (@height * @width / (1280 * 800))) # normalize quantity by window size
+        _.log "creating #{quantity} of type #{object_type} : #{ENUM_NAME_BY_TYPE[object_type]}"
+        _(quantity).times =>
+          invuln_ticks = if @level_idx == 0 && wave_idx == 0 then 0 else 60
+          game_object = create_game_object[object_type](@random_x_coord(), @random_y_coord(), invuln_ticks)
+          @game_objects[game_object.guid] = game_object
+
+          @setup_physics_for_game_object(game_object)
+
+    else if levels[@level_idx + 1]?
+      _.log "Advancing levels!"
+      @level_idx += 1
+      @prev_wave_spawned_by_level[@level_idx] = -1
+      @level_start_time = _.now()
+      return @start_next_wave_or_level()
+    else
+      _.log "hmm"
+
 
   start_collision_detection : ->
     listener = new Box2D.Dynamics.b2ContactListener
@@ -98,7 +127,9 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
           a = @game_objects[guid_b]
           b = @game_objects[guid_a]
 
-        #console.log "Collision between #{a.type} and #{b.type}"
+        force *= 120 if a.type == BULLET || b.type == BULLET
+
+        #_.log "Collision between #{a.type} and #{b.type}"
 
         if a.type == ASTEROID && b.type == BULLET
           a.hp -= force
@@ -107,7 +138,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
           a.hp -= force
           b.hp -= force
         else if a.type == ASTEROID && b.is_player
-          #console.log "A-P force : #{force}"
+          #_.log "A-P force : #{force}"
           if force > 0.25 # so player can push shit around without getting hurt
             a.hp -= force
             b.hp -= force
@@ -120,6 +151,21 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
           a.hp = 0
 
     @world.SetContactListener(listener)
+
+  setup_physics_for_game_object: (game_object) ->
+    body = if game_object.radius?
+      @setup_circular_physics_body(game_object)
+    else
+      @setup_physics_for_polygon(game_object)
+
+    if game_object.type == JERK
+      body.SetAngularDamping(4.5)
+      body.SetLinearDamping(1.5)
+
+    if game_object.type == ASTEROID
+      body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), body.GetWorldCenter())
+
+    body
 
   setup_physics_for_polygon: (game_object) ->
     fix_def = new b2FixtureDef
@@ -139,14 +185,17 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     body_def.position.x = game_object.x
     body_def.position.y = game_object.y
     body_def.userData = game_object.guid
-    #console.log guid
-    return @world.CreateBody(body_def).CreateFixture(fix_def)
+    #_.log guid
+    return @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
 
   setup_circular_physics_body: (game_object) ->
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
     fix_def = new b2FixtureDef
-    fix_def.density = 1.0
+    if game_object.type == BULLET
+      fix_def.density = 0.20
+    else
+      fix_def.density = 1.0
     fix_def.friction = 0.5
     fix_def.restitution = 0.2
 
@@ -159,8 +208,8 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
   setup_physics_for_bullet: (bullet) ->
     bullet_body = @setup_circular_physics_body(bullet)
-    pow = 0.1 * (bullet.radius / 0.05)
-    pow *= 3 if bullet.radius > SMALLEST_BULLET_RADIUS
+    pow = 0.012 * (bullet.radius / 0.05)
+    # pow *= 3 if bullet.radius > SMALLEST_BULLET_RADIUS
     bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
     bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
       Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
@@ -168,11 +217,11 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
   shoot_bullet : (radius) ->
     x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
     y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
-    #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    bullet = create_bullet(radius, x, y, @player.guid)
+    #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
+    bullet = create_game_object[BULLET](radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     @setup_physics_for_bullet(bullet)
-    @player.fire_juice -= radius * 50 if radius > SMALLEST_BULLET_RADIUS
+    @player.fire_juice -= radius * 250
 
   # wrap object to other side of screen if its not on screen
   wrap_object : (body) ->
@@ -201,8 +250,8 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     offset = if do_backwards then game_object.max_x + 0.1 else game_object.min_x - 0.1
     x = game_object.x + (offset + radius) * Math.cos(angle + PI % TWO_PI)
     y = game_object.y + (offset + radius) * Math.sin(angle + PI % TWO_PI)
-    #console.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    particle = create_particle(radius, x, y)
+    #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
+    particle = create_game_object[PARTICLE](radius, x, y)
     @game_objects[particle.guid] = particle
     body_def = new b2BodyDef
     body_def.type = b2Body.b2_dynamicBody
@@ -234,9 +283,9 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     if @keys.SPACE
       if @player.fire_juice > 0
         @shoot_bullet 0.05
-    if @keys.SHIFT
-      if @player.fire_juice > 0
-        @shoot_bullet 0.20
+    # if @keys.SHIFT
+    #   if @player.fire_juice > 0
+    #     @shoot_bullet 0.20
 
   handle_jerk_ai : (jerk, jerk_body) ->
     dx =  player.x - jerk.x
@@ -244,7 +293,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     attack_angle = _.normalize_angle(Math.atan2(dy, dx))
     jerk_angle = jerk.angle
     angle_diff = _.normalize_angle(jerk_angle - attack_angle)
-    console.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
+    _.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
       angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
     is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
     if jerk.current_charge_start
@@ -257,7 +306,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
       jerk.aim += 1
       if jerk.aim > JERK_AIM_TIME
         jerk.current_charge_start = _.now()
-        console.log "ATTACK!"
+        _.log "ATTACK!"
     else
       jerk.aim = 0 if jerk.aim
       # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
@@ -292,7 +341,7 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
             graveyard.push(game_object)
             @world.DestroyBody(body)
             if game_object.type == JERK && _.random() < 0.3
-              health_pack = create_health_pack(game_object.x, game_object.y)
+              health_pack = create_game_object[HEALTH_PACK](game_object.x, game_object.y)
               @game_objects[health_pack.guid] = health_pack
               health_pack_body = @setup_circular_physics_body(health_pack)
               health_pack_body.SetLinearDamping(3)
@@ -318,50 +367,35 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
       @score += point_value if point_value?
       delete @game_objects[o.guid]
 
-    if @enemies_remaining == 0
-      @finished = true
+    # if @enemies_remaining == 0
+    #   @finished = true
 
     @prev_update_millis = @millis
-    @spawn_enemies_tick() if @num_update_ticks % 20 == 1
+
+    @advance_level_check() if @num_update_ticks % 20 == 1
+
+    #@spawn_enemies_tick() if @num_update_ticks % 20 == 1
     @num_update_ticks += 1
+
+  advance_level_check : () ->
+    on_last_level = @level_idx == levels.length - 1
+    on_last_wave = @prev_wave_spawned_by_level[@level_idx] == levels[@level_idx].waves.length - 1
+    if !on_last_wave
+      wave_due_at = @wave_start_time + levels[@level_idx].waves[@prev_wave_spawned_by_level[@level_idx]].start_time
+      due_for_wave = _.now() > wave_due_at
+
+    if on_last_level && on_last_wave
+      @finished = true if @enemies_remaining == 0
+    else if (@enemies_remaining < 2 || due_for_wave)  && !on_last_wave
+      @start_next_wave_or_level()
+    else if @enemies_remaining == 0
+      @start_next_wave_or_level()
 
   random_x_coord : () ->
     random(@width / 10 / SCALE, (@width - @width / 10) / SCALE)
 
-  random_y_coord : ()->
+  random_y_coord : () ->
     _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE)
-
-  spawn_enemies_tick: () ->
-    time_since_last_spawn = _.now() - @prev_spawn_time
-    min_delay = 0
-    min_delay = if @millis < 15000
-      6000
-    else if @millis < 25000
-      4000
-    else if @millis < 35000
-      3000
-    else if @millis < 60000
-      1500
-    else
-      500
-
-    if time_since_last_spawn > min_delay
-      @prev_spawn_time = _.now()
-      if _.random() < 0.7
-        console.log "Spawning asteroid!"
-        random_points = random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-        a = create_asteroid(random_points, @random_x_coord(), @random_y_coord(), 60)
-        @game_objects[a.guid] = a
-        fixture = @setup_physics_for_polygon(a)
-        fixture.GetBody().ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), fixture.GetBody().GetWorldCenter())
-      else #if !@have_jerk
-        #@have_jerk = true
-        console.log "Spawning jerk!"
-        jerk = create_jerk(@random_x_coord(), @random_y_coord(), 60)
-        @game_objects[jerk.guid] = jerk
-        fixture = @setup_physics_for_polygon(jerk)
-        fixture.GetBody().SetAngularDamping(4.5)
-        fixture.GetBody().SetLinearDamping(1.5)
 
    toggle_debug: () ->
      if @debug?
@@ -395,6 +429,21 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
     @fillStyle = "#63D1F4"
     @fillRect(10, 20, (@player.fire_juice / MAX_PLAYER_FIRE_JUICE) * bar_w,  bar_h)
 
+  draw_score : () ->
+    @textAlign = "right"
+    @font = "30px monospace"
+    @strokeStyle = "#63D1F4"
+    @strokeText("#{@score}", @width - 5, 30)
+
+  draw_level_intro : () ->
+    d = _.now() - @level_start_time
+    if d <= LEVEL_INTRO_TIME
+      @textAlign = "center"
+      @font = "50px monospace"
+      eased_alpha = Math.sin(d / LEVEL_INTRO_TIME * Math.PI)
+      @strokeStyle = "rgba(99, 209, 244, #{eased_alpha})"
+      @strokeText("Level #{@level_idx + 1}", @width / 2, @height / 2 - 100)
+
   draw : () ->
     return if @debug
     for key, game_object of @game_objects
@@ -403,11 +452,8 @@ b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 
     @draw_hp_bar()
     @draw_fire_juice_bar()
-
-    @textAlign = "right"
-    @font = "30px monospace"
-    @strokeStyle = "#63D1F4"
-    @strokeText("#{@score}", @width - 5, 30)
+    @draw_score()
+    @draw_level_intro()
 
     if @finished
       @textAlign = "center"

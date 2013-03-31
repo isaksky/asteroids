@@ -48,3 +48,13 @@ _.mixin
     a2 = _.normalize_angle_pos(a2)
     d =  _.normalize_angle(a1 - a2)
     d >= 0
+
+  ease_in_out : (v) ->
+    if v < 0.5
+      4 * v * v * v
+    else
+      f = (2 * v) - 2
+      0.5 * f * f * f + 1
+
+  log : (msg) ->
+    console?.log?(msg)
