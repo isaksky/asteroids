@@ -54,7 +54,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 @create_game_object[ASTEROID] = (x, y, invuln_ticks = 0, points = null) ->
   unless points?
     points = util.random_polygon_points(_.random(0.25, 1), _.random(5, 8))
-  asteroid = {points, x, y, invuln_ticks, hp: 100}
+  asteroid = {points, x, y, invuln_ticks, hp: 30}
   asteroid.color = _.random(COLOR_PALETTE_2)
   calc_game_object_bounds(asteroid)
   asteroid
@@ -62,7 +62,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 @create_game_object[JERK] = (x, y, invuln_ticks = 0) ->
   jerk = {x, y, invuln_ticks, aim: 0, current_charge_start: null}
   jerk.color = '#cd6090'
-  jerk.hp = jerk.max_hp = 10
+  jerk.hp = jerk.max_hp = 20
   jerk.points = [
     {x: 1, y: 0}
     {x: 0.6, y: 0.2}
