@@ -222,7 +222,7 @@ LEVEL_INTRO_TIME = 2500
     bullet = create_game_object[BULLET](radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     @setup_physics_for_bullet(bullet)
-    @player.fire_juice -= radius * 250
+    @player.fire_juice = Math.max(@player.fire_juice - radius * 250, 0)
 
   # wrap object to other side of screen if its not on screen
   wrap_object : (body) ->
