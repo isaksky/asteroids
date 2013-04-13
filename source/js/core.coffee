@@ -14,6 +14,7 @@ LEVEL_INTRO_TIME = 2500
 
 @game = Sketch.create
   container : document.getElementById "container"
+  # Gotta turn things way down for people not using Chrome
   max_pixels :  if "Google Inc." == window.navigator?.vendor then 1280 * 800 else 800 * 600
   setup : ->
     @waves_spawned_by_level = {}
@@ -79,6 +80,7 @@ LEVEL_INTRO_TIME = 2500
 
 
   start_collision_detection : ->
+    #NOTE: This part of the code is a total shitshow. Trying to think of how to simplify.
     listener = new Box2D.Dynamics.b2ContactListener
     listener.PreSolve = (contact) =>
       guid_a = contact.GetFixtureA().GetBody().GetUserData()
@@ -106,7 +108,7 @@ LEVEL_INTRO_TIME = 2500
         if (a.type == ASTEROID || a.type == JERK) && a.invuln_ticks && b.is_player
           contact.SetEnabled(false)
 
-        if a.type in DROP_TYPES # == HEALTH_PACK || b.type == HEALTH_PACK
+        if a.type in DROP_TYPES || b.type in DROP_TYPES
           contact.SetEnabled(false)
           if b.is_player
             a.consume(b)
@@ -209,11 +211,14 @@ LEVEL_INTRO_TIME = 2500
 
   setup_physics_for_bullet: (bullet) ->
     bullet_body = @setup_circular_physics_body(bullet)
-    pow = 0.012 * (bullet.radius / 0.05)
-    # pow *= 3 if bullet.radius > SMALLEST_BULLET_RADIUS
-    bullet_body.SetLinearVelocity(@player_body.GetLinearVelocity())
-    bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
-      Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
+    player_vel = @player_body.GetLinearVelocity()
+    bullet_vel = new b2Vec2(
+      player_vel.x + Math.cos(@player.angle) * BASE_BULLET_SPEED
+      player_vel.y + Math.sin(@player.angle) * BASE_BULLET_SPEED
+    )
+    bullet_body.SetLinearVelocity(bullet_vel)
+    # bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
+    #   Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
 
   shoot_bullet : (radius) ->
     x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
@@ -222,7 +227,7 @@ LEVEL_INTRO_TIME = 2500
     bullet = create_game_object[BULLET](radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     @setup_physics_for_bullet(bullet)
-    @player.fire_juice = Math.max(@player.fire_juice - radius * 250, 0)
+    @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
   # wrap object to other side of screen if its not on screen
   wrap_object : (body) ->
@@ -282,7 +287,7 @@ LEVEL_INTRO_TIME = 2500
     if @keys.RIGHT
       @player_body.ApplyTorque(0.2)
     if @keys.SPACE
-      if @player.fire_juice > 0
+      if @player.fire_juice > BASE_BULLET_COST
         @shoot_bullet @player.bullet_radius
     # if @keys.SHIFT
     #   if @player.fire_juice > 0
@@ -318,7 +323,7 @@ LEVEL_INTRO_TIME = 2500
 
   update : ->
     return if @finished
-    @player.fire_juice += 1.5
+    @player.fire_juice += 0.5
     @player.fire_juice = MAX_PLAYER_FIRE_JUICE if @player.fire_juice > MAX_PLAYER_FIRE_JUICE #Math.min(@player.fire_juice, 100)
 
     @handle_keyboard_input()
