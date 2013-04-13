@@ -58,3 +58,24 @@ _.mixin
 
   log : (msg) ->
     console?.log?(msg)
+
+  benchmark : (fn) ->
+    that = @
+    window.cumulative_time_by_fn = {} unless window.cumulative_time_by_fn
+    _.wrap fn, (fn) =>
+      start = _.now()
+      res = fn.call(window.game) # hax
+      end = _.now()
+      window.cumulative_time_by_fn[fn.toString()] ||= 0
+      window.cumulative_time_by_fn[fn.toString()] += end - start
+      res
+
+  benchmark_results : () ->
+    total = _.reduce _.values(cumulative_time_by_fn),
+      (memo, v) -> memo + v,
+      0
+
+    pcts = {}
+    for k, v of cumulative_time_by_fn
+      pcts[k] = (v / total) * 100
+    pcts

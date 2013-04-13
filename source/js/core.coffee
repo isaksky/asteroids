@@ -321,7 +321,7 @@ LEVEL_INTRO_TIME = 2500
       jerk_body.ApplyTorque(torque)
 
 
-  update : ->
+  update : _.benchmark () ->
     return if @finished
     @player.fire_juice += 0.5
     @player.fire_juice = MAX_PLAYER_FIRE_JUICE if @player.fire_juice > MAX_PLAYER_FIRE_JUICE #Math.min(@player.fire_juice, 100)
@@ -453,7 +453,7 @@ LEVEL_INTRO_TIME = 2500
       @strokeStyle = "rgba(99, 209, 244, #{eased_alpha})"
       @strokeText("Level #{@level_idx + 1}", @width / 2, @height / 2 - 100)
 
-  draw : () ->
+  draw : _.benchmark () ->
     return if @debug
     for key, game_object of @game_objects
       game_object_type_name = ENUM_NAME_BY_TYPE[game_object.type]
