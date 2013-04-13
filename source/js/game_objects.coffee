@@ -33,7 +33,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   particle
 
 @create_game_object[SHIP] = (x,y) ->
-  ship = {x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0}
+  ship = {x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0, bullet_radius: 0.05}
   ship.points = [
       {x: 0.75, y: 0}
       #{x: 0.15, y: 1}
@@ -79,6 +79,14 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   powerup.color = "#cd5c5c"
   powerup.consume = (ship) ->
     ship.hp = Math.min(ship.hp + amt, ship.max_hp)
+  powerup
+
+@create_game_object[BULLET_RADIUS_POWERUP] = (x, y) ->
+  powerup = {x, y, hp:1}
+  powerup.radius = 0.2
+  powerup.color = "#0033ff"
+  powerup.consume = (ship) ->
+    ship.bullet_radius *= 1.2
   powerup
 
 # Add the type field to all the game objects

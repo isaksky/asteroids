@@ -106,7 +106,7 @@ LEVEL_INTRO_TIME = 2500
         if (a.type == ASTEROID || a.type == JERK) && a.invuln_ticks && b.is_player
           contact.SetEnabled(false)
 
-        if a.type == HEALTH_PACK || b.type == HEALTH_PACK
+        if a.type in DROP_TYPES # == HEALTH_PACK || b.type == HEALTH_PACK
           contact.SetEnabled(false)
           if b.is_player
             a.consume(b)
@@ -283,7 +283,7 @@ LEVEL_INTRO_TIME = 2500
       @player_body.ApplyTorque(0.2)
     if @keys.SPACE
       if @player.fire_juice > 0
-        @shoot_bullet 0.05
+        @shoot_bullet @player.bullet_radius
     # if @keys.SHIFT
     #   if @player.fire_juice > 0
     #     @shoot_bullet 0.20
@@ -341,11 +341,14 @@ LEVEL_INTRO_TIME = 2500
           else
             graveyard.push(game_object)
             @world.DestroyBody(body)
-            if game_object.type == JERK && _.random() < 0.3
-              health_pack = create_game_object[HEALTH_PACK](game_object.x, game_object.y)
-              @game_objects[health_pack.guid] = health_pack
-              health_pack_body = @setup_circular_physics_body(health_pack)
-              health_pack_body.SetLinearDamping(3)
+
+            drop_pct = DROP_PCT_BY_TYPE[game_object.type]
+            if drop_pct? && _.random() <= drop_pct
+              drop_type = _.random(DROP_TYPES)
+              drop = create_game_object[drop_type](game_object.x, game_object.y)
+              @game_objects[drop.guid] = drop
+              drop_body = @setup_circular_physics_body(drop)
+              drop_body.SetLinearDamping(1)
         else if game_object.type == BULLET && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)
           @world.DestroyBody(body)

@@ -167,5 +167,17 @@ drawing =
     ctx.fill()
     ctx.restore()
 
+  draw_bullet_radius_powerup : (ctx, powerup) ->
+    display_radius = SCALE * powerup.radius
+    ctx.save()
+    ctx.beginPath()
+    x = powerup.x * SCALE
+    y = powerup.y * SCALE
+    ctx.arc(x, y, display_radius, 0, TWO_PI, true)
+    ctx.closePath()
+    ctx.fillStyle = powerup.color #"rgba(255,0,0,0.6)"
+    ctx.fill()
+    ctx.restore()
+
 # loljs export
 @drawing = drawing

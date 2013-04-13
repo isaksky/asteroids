@@ -9,17 +9,24 @@
 def_enums = (() =>
   enum_i = 0
   ((vals...) =>
+    vals.sort()
     for v in vals
       @[v] = enum_i
       @ENUM_NAME_BY_TYPE[enum_i] = v.toLowerCase()
       enum_i += 1))()
 
-# IMPORTANT!! : Keep these in alphabetical order. The collision detection functions depend on it.
-def_enums "ASTEROID", "BULLET", "HEALTH_PACK", "JERK", "PARTICLE", "SHIP"
+def_enums "ASTEROID", "BULLET", "HEALTH_PACK", "JERK", "PARTICLE", "SHIP", "BULLET_RADIUS_POWERUP"
 
 @POINTS_BY_TYPE = {}
 POINTS_BY_TYPE[ASTEROID] = 50
 POINTS_BY_TYPE[JERK] = 500
+
+# Percent of the time when a game object type will drop something when killed
+@DROP_PCT_BY_TYPE = {}
+DROP_PCT_BY_TYPE[ASTEROID] = 0.01
+DROP_PCT_BY_TYPE[JERK] = 0.25
+
+@DROP_TYPES = [HEALTH_PACK, BULLET_RADIUS_POWERUP]
 
 # How much space is there beyond the edge of the screen?
 # We dont want objects to just wrap before they have completely dissapeared
