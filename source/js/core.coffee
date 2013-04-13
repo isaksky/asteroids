@@ -14,7 +14,7 @@ LEVEL_INTRO_TIME = 2500
 
 @game = Sketch.create
   container : document.getElementById "container"
-  max_pixels : 1280 * 800
+  max_pixels :  if "Google Inc." == window.navigator?.vendor then 1280 * 800 else 800 * 600
   setup : ->
     @waves_spawned_by_level = {}
     @jerk_charge_duration = JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
