@@ -78,80 +78,70 @@ LEVEL_INTRO_TIME = 2500
     else
       _.log "hmm"
 
+  contact_info : (contact) ->
+    info = {}
+    guid_a = contact.GetFixtureA().GetBody().GetUserData()
+    guid_b = contact.GetFixtureB().GetBody().GetUserData()
+    if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
+      a = @game_objects[guid_a]
+      b = @game_objects[guid_b]
+      info.same_types = a.type == b.type
+      if info.same_types
+        info.both = [a, b]
+      else
+        info[a.type] = a
+        info[b.type] = b
+    info
 
   start_collision_detection : ->
     #NOTE: This part of the code is a total shitshow. Trying to think of how to simplify.
     listener = new Box2D.Dynamics.b2ContactListener
     listener.PreSolve = (contact) =>
-      guid_a = contact.GetFixtureA().GetBody().GetUserData()
-      guid_b = contact.GetFixtureB().GetBody().GetUserData()
-      if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b] # we dont care about boundaries for now
-        # Sort the objects. This eliminates duplicate logic below
-        if @game_objects[guid_a].type < @game_objects[guid_b].type
-          a = @game_objects[guid_a]
-          b = @game_objects[guid_b]
-        else
-          a = @game_objects[guid_b]
-          b = @game_objects[guid_a]
+      contact_info = @contact_info(contact)
+      if contact_info.same_types && contact_info.both[0].type == BULLET
+        contact.SetEnabled(false)
+      else if contact_info[BULLET] && contact_info[PARTICLE]
+        contact.SetEnabled(false)
 
-        if a.type == b.type == BULLET
-          contact.SetEnabled(false)
-
-        if a.type == BULLET && b.type == PARTICLE
-          contact.SetEnabled(false)
-
-        # ignore contacts between player and his own bullets
-        if b.is_player && a.type == BULLET && a.source_object_guid == b.guid
-          contact.SetEnabled(false)
-
-        # player can't crash into invuln asteroid or jerk
-        if (a.type == ASTEROID || a.type == JERK) && a.invuln_ticks && b.is_player
-          contact.SetEnabled(false)
-
-        if a.type in DROP_TYPES || b.type in DROP_TYPES
-          contact.SetEnabled(false)
-          if b.is_player
-            a.consume(b)
-            a.hp = 0
+      else if contact_info[SHIP] && contact_info[BULLET] &&
+      contact_info[BULLET].source_object_guid != contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
+        contact.SetEnabled(false)
+      else if (contact_info[ASTEROID]?.invuln_ticks || contact_info[JERK]?.invuln_ticks) && contact_info[SHIP]?.is_player
+        contact.SetEnabled(false)       # player can't crash into invuln asteroid or jerk
+      else if drop = _.clj_some(DROP_TYPES, (game_object_type) -> contact_info[game_object_type])
+        contact.SetEnabled(false)
+        if contact_info[SHIP]?.is_player
+          drop.consume(contact_info[SHIP])
+          drop.hp = 0
 
         # else if a instanceof Particle && b instanceof Particle
         #   contact.SetEnabled(false)
 
     listener.PostSolve = (contact, impulse) =>
       force = Math.abs(impulse.normalImpulses[0]) * 8.5
-      guid_a = contact.GetFixtureA().GetBody().GetUserData()
-      guid_b = contact.GetFixtureB().GetBody().GetUserData()
-      if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
-        #Sort the objects. This eliminates duplicate logic below
-        if @game_objects[guid_a].type < @game_objects[guid_b].type
-          a = @game_objects[guid_a]
-          b = @game_objects[guid_b]
-        else
-          a = @game_objects[guid_b]
-          b = @game_objects[guid_a]
+      contact_info = @contact_info(contact)
 
-        force *= 120 if a.type == BULLET || b.type == BULLET
+      force *= 120 if contact_info[BULLET]
 
-        #_.log "Collision between #{a.type} and #{b.type}"
+      #_.log "Collision between #{a.type} and #{b.type}"
 
-        if a.type == ASTEROID && b.type == BULLET
-          a.hp -= force
-          b.hp = 0
-        else if a.type == ASTEROID && b.type == ASTEROID
-          a.hp -= force
-          b.hp -= force
-        else if a.type == ASTEROID && b.is_player
-          #_.log "A-P force : #{force}"
-          if force > 0.25 # so player can push shit around without getting hurt
-            a.hp -= force
-            b.hp -= force
-        else if b.is_player && (a.type == BULLET && a.source_object_guid == b.guid)
-          a.hp -= force
-        else if a.type == JERK && b.is_player
-          b.hp -= force
-        else if a.type == BULLET && b.type == JERK
-          b.hp -= force
-          a.hp = 0
+      if contact_info[ASTEROID] && contact_info[BULLET]
+        contact_info[ASTEROID].hp -= force
+        contact_info[BULLET].hp = 0
+      else if contact_info.same_types && contact_info.both[0].type == ASTEROID
+        contact_info.both[0].hp -= force
+        contact_info.both[1].hp -= force
+      else if contact_info[ASTEROID] && contact_info[SHIP]?.is_player
+        if force > 0.25 # so player can push shit around a bit without getting hurt
+          contact_info[ASTEROID].hp -= force
+          contact_info[SHIP].hp -= force
+      else if contact_info[SHIP]?.is_player && (contact_info[BULLET]?.source_object_guid != contact_info[SHIP].guid)
+        contact_info[SHIP].hp -= force
+      else if contact_info[JERK] && contact_info[SHIP]?.is_player
+        contact_info[SHIP]?.hp -= force
+      else if contact_info[BULLET] && contact_info[JERK]
+        contact_info[JERK].hp -= force
+        contact_info[BULLET].hp = 0
 
     @world.SetContactListener(listener)
 
@@ -299,8 +289,8 @@ LEVEL_INTRO_TIME = 2500
     attack_angle = _.normalize_angle(Math.atan2(dy, dx))
     jerk_angle = jerk.angle
     angle_diff = _.normalize_angle(jerk_angle - attack_angle)
-    _.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
-      angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
+    #_.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
+    #  angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
     is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
     if jerk.current_charge_start
       @gas(jerk, jerk_body, false, 0.07)
