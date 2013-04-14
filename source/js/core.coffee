@@ -319,7 +319,8 @@ LEVEL_INTRO_TIME = 2500
     @handle_keyboard_input()
 
     #bottom
-    @world.Step(1 / 60, 10, 10)
+    step_rate = @dt / 1000
+    @world.Step(step_rate, 10, 10)
     @world.DrawDebugData() if @debug
     @world.ClearForces()
 
