@@ -1,7 +1,7 @@
 // Place any jQuery/helper plugins in here.
 //= require vendor/underscore-min.js
 //= require vendor/Box2dWeb-2.1.a.3.min.js
-//= require vendor/zepto.min.js
+//  require vendor/zepto.min.js
 //= require vendor/sketch.js
 
 
