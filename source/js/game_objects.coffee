@@ -9,11 +9,11 @@ calc_game_object_bounds = (game_object) ->
   else
     throw new Error("Dont know how to calculate bounds for #{game_object.type}")
 
-get_guid = (() ->
+get_guid = do ->
   guid_idx = 0
-  (() ->
+  ->
     guid_idx += 1
-    "#{guid_idx}"))()
+    "#{guid_idx}"
 
 COLOR_PALLETE_1 = ["rgba(233, 244, 0, 0)", "rgba(233, 0, 0, 0)", "rgba(0, 244, 0, 0)", "rgba(0, 0, 255, 0)"]
 COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423' ]
