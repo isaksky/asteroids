@@ -104,7 +104,7 @@ LEVEL_INTRO_TIME = 2500
         contact.SetEnabled(false)
 
       else if contact_info[SHIP] && contact_info[BULLET] &&
-      contact_info[BULLET].source_object_guid != contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
+      contact_info[BULLET].source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
         contact.SetEnabled(false)
       else if (contact_info[ASTEROID]?.invuln_ticks || contact_info[JERK]?.invuln_ticks) && contact_info[SHIP]?.is_player
         contact.SetEnabled(false)       # player can't crash into invuln asteroid or jerk
