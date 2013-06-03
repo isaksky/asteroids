@@ -33,7 +33,7 @@ LEVEL_INTRO_TIME = 2500
     window.player = @player
     @game_objects[@player.guid] = @player
 
-    @player_body = @setup_physics_for_game_object(player)
+    @player_body = physics_helper.setup_physics_for[SHIP](player, @world)
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
 
@@ -243,9 +243,9 @@ LEVEL_INTRO_TIME = 2500
       Math.sin(angle) * pow), physics_body.GetWorldCenter())
 
     radius = 0.1
-    offset = if do_backwards then game_object.max_x + 0.1 else game_object.min_x - 0.1
-    x = game_object.x + (offset + radius) * Math.cos(angle + PI % TWO_PI)
-    y = game_object.y + (offset + radius) * Math.sin(angle + PI % TWO_PI)
+    offset = if do_backwards then game_object.max_x + 0.1 else game_object.min_x + 0.1
+    x = game_object.x + (offset + radius) * Math.cos(angle + PI)
+    y = game_object.y + (offset + radius) * Math.sin(angle + PI)
     #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     particle = create_game_object[PARTICLE](radius, x, y)
     @game_objects[particle.guid] = particle

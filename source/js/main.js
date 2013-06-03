@@ -4,4 +4,6 @@
 //= require drawing
 //= require game_objects
 //= require levels
+//= require physics
+//= require box_2d_separator
 //= require core
