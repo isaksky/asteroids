@@ -44,16 +44,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 
 @create_game_object[SHIP] = (x,y) ->
   ship = {x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0, bullet_radius: 0.05}
-  # ship.points = [
-  #     {x: 0.75, y: 0}
-  #     # {x: 0.15, y: 1}
-  #     {x: 0, y: 0.25}
-  #     # {x: -0.15, y: 0}
-  #     {x: 0, y: -0.25}
-  #     # {x:0.5, y:-1}
-  #   ]
-  ship.points = reflect_finish([{x: 0.75, y: 0}, {x: 0.2, y: -0.1}, {x: 0, y: -0.3}])
-  #console.log "pts: #{JSON.stringify(ship.points)}"
+  ship.points = reflect_finish([{x: 0.75, y: 0}, {x: 0.2, y: 0.1}, {x: 0, y: 0.3}])
   calc_game_object_bounds(ship)
   ship
 

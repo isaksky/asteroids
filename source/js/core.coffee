@@ -33,7 +33,7 @@ LEVEL_INTRO_TIME = 2500
     window.player = @player
     @game_objects[@player.guid] = @player
 
-    @player_body = physics_helper.setup_physics_for[SHIP](player, @world)
+    @player_body = physics_helper.get_physics_setup_fn(@player)(@player, @world)
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
 
@@ -65,8 +65,7 @@ LEVEL_INTRO_TIME = 2500
           invuln_ticks = if @level_idx == 0 && wave_idx == 0 then 0 else 60
           game_object = create_game_object[object_type](@random_x_coord(), @random_y_coord(), invuln_ticks)
           @game_objects[game_object.guid] = game_object
-
-          @setup_physics_for_game_object(game_object)
+          physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
 
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
@@ -145,78 +144,14 @@ LEVEL_INTRO_TIME = 2500
 
     @world.SetContactListener(listener)
 
-  setup_physics_for_game_object: (game_object) ->
-    body = if game_object.radius?
-      @setup_circular_physics_body(game_object)
-    else
-      @setup_physics_for_polygon(game_object)
-
-    if game_object.type == JERK
-      body.SetAngularDamping(4.5)
-      body.SetLinearDamping(1.5)
-
-    if game_object.type == ASTEROID
-      body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), body.GetWorldCenter())
-
-    body
-
-  setup_physics_for_polygon: (game_object) ->
-    fix_def = new b2FixtureDef
-    fix_def.density = 1.0
-    fix_def.friction = 0.5
-    fix_def.restitution = 0.2
-    body_def = new b2BodyDef
-    body_def.type = b2Body.b2_dynamicBody
-    fix_def.shape = new b2PolygonShape
-    fix_def.restitution = 0.4
-    shape_points = []
-    for p in game_object.points
-      vec = new b2Vec2
-      vec.Set(p.x, p.y)
-      shape_points.push(vec)
-    fix_def.shape.SetAsArray(shape_points, shape_points.length)
-    body_def.position.x = game_object.x
-    body_def.position.y = game_object.y
-    body_def.userData = game_object.guid
-    #_.log guid
-    return @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
-
-  setup_circular_physics_body: (game_object) ->
-    body_def = new b2BodyDef
-    body_def.type = b2Body.b2_dynamicBody
-    fix_def = new b2FixtureDef
-    if game_object.type == BULLET
-      fix_def.density = 0.20
-    else
-      fix_def.density = 1.0
-    fix_def.friction = 0.5
-    fix_def.restitution = 0.2
-
-    fix_def.shape = new b2CircleShape(game_object.radius)
-    fix_def.restitution = 0.4
-    body_def.position.x = game_object.x
-    body_def.position.y = game_object.y
-    body_def.userData = game_object.guid
-    @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
-
-  setup_physics_for_bullet: (bullet) ->
-    bullet_body = @setup_circular_physics_body(bullet)
-    player_vel = @player_body.GetLinearVelocity()
-    bullet_vel = new b2Vec2(
-      player_vel.x + Math.cos(@player.angle) * BASE_BULLET_SPEED
-      player_vel.y + Math.sin(@player.angle) * BASE_BULLET_SPEED
-    )
-    bullet_body.SetLinearVelocity(bullet_vel)
-    # bullet_body.ApplyImpulse(new b2Vec2(Math.cos(@player.angle) * pow,
-    #   Math.sin(@player.angle) * pow), @player_body.GetWorldCenter())
-
   shoot_bullet : (radius) ->
     x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
     y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
     #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     bullet = create_game_object[BULLET](radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
-    @setup_physics_for_bullet(bullet)
+    physics_helper.get_physics_setup_fn(bullet)(bullet, @world, @player_body, @player)
+    #@setup_physics_for_bullet(bullet)
     @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
   # wrap object to other side of screen if its not on screen
@@ -343,7 +278,7 @@ LEVEL_INTRO_TIME = 2500
               drop_type = _.random(DROP_TYPES)
               drop = create_game_object[drop_type](game_object.x, game_object.y)
               @game_objects[drop.guid] = drop
-              drop_body = @setup_circular_physics_body(drop)
+              drop_body = physics_helper.get_physics_setup_fn(drop)(drop, @world)
               drop_body.SetLinearDamping(1)
         else if game_object.type == BULLET && (_.now() - game_object.start_time) > 1400
           graveyard.push(game_object)

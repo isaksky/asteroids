@@ -12,4 +12,4 @@ random_polygon_points = (radius, num_sides) ->
     angle += angle_step
   points
 
-@util = { random_polygon_points}
+@util = { random_polygon_points }
