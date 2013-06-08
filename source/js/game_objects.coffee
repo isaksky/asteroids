@@ -78,7 +78,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 
 @create_game_object[HEALTH_PACK] = (x, y, amt = 8) ->
   powerup = {x, y, hp:1}
-  powerup.radius = 0.3
+  powerup.radius = 0.2
   powerup.color = "#cd5c5c"
   powerup.consume = (ship) ->
     ship.hp = Math.min(ship.hp + amt, ship.max_hp)

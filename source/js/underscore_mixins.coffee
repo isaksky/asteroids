@@ -86,3 +86,15 @@ _.mixin
       res = pred(v)
       break if res
     res
+
+  revolve_points_in_quadrant : (pts) ->
+    ret = pts.slice()
+    for angle in [HALF_PI..(3 * HALF_PI)] by HALF_PI
+      for pt in pts
+        d = Math.sqrt(pt.x * pt.x + pt.y * pt.y)
+        orig_angle = Math.atan2(pt.y, pt.x)
+        new_angle = orig_angle + angle
+        new_x = d * Math.cos(new_angle)
+        new_y = d * Math.sin(new_angle)
+        ret.push({x : new_x, y : new_y})
+    ret

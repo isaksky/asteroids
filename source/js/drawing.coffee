@@ -154,16 +154,31 @@ drawing =
     ctx.restore()
 
   draw_health_pack : (ctx, health_pack) ->
-    display_radius = SCALE * health_pack.radius # * (1 - age / MAX_PARTICLE_AGE)
+    display_radius = SCALE * health_pack.radius
     ctx.save()
-    #ctx.rotate(dToR(circle.rotation+185))
-    #ctx.scale(1,1)
     ctx.beginPath()
     x = health_pack.x * SCALE
     y = health_pack.y * SCALE
     ctx.arc(x, y, display_radius, 0, TWO_PI, true)
     ctx.closePath()
     ctx.fillStyle = "rgba(255,0,0,0.6)"
+    ctx.fill()
+    ctx.restore()
+
+    ctx.save()
+
+    # draw the cross:
+    # TODO : be a bit smarter about object creation, and possibly ctx.translate/rotate here
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'
+    ctx.beginPath()
+    for pt, i in _.revolve_points_in_quadrant([
+      {x:health_pack.radius * 0.8, y: health_pack.radius * 0.2}
+      {x:health_pack.radius * 0.2, y: health_pack.radius * 0.2}
+      {x:health_pack.radius * 0.2, y: health_pack.radius * 0.8}
+    ])
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((pt.x + health_pack.x) * SCALE, (pt.y + health_pack.y) * SCALE)
+    ctx.closePath()
     ctx.fill()
     ctx.restore()
 
