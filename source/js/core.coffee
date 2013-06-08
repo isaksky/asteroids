@@ -75,7 +75,7 @@ LEVEL_INTRO_TIME = 2500
       @level_start_time = _.now()
       return @start_next_wave_or_level()
     else
-      _.log "hmm"
+      _.log "programming incompetens excepshon"
 
   contact_info : (contact) ->
     info = {}
@@ -147,11 +147,9 @@ LEVEL_INTRO_TIME = 2500
   shoot_bullet : (radius) ->
     x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
     y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
-    #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     bullet = create_game_object[BULLET](radius, x, y, @player.guid)
     @game_objects[bullet.guid] = bullet
     physics_helper.get_physics_setup_fn(bullet)(bullet, @world, @player_body, @player)
-    #@setup_physics_for_bullet(bullet)
     @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
   # wrap object to other side of screen if its not on screen
@@ -199,9 +197,8 @@ LEVEL_INTRO_TIME = 2500
       @player_body.ApplyTorque(-0.2)
     if @keys.RIGHT
       @player_body.ApplyTorque(0.2)
-    if @keys.SPACE
-      if @player.fire_juice > BASE_BULLET_COST
-        @shoot_bullet @player.bullet_radius
+    if @keys.SPACE && @player.fire_juice > BASE_BULLET_COST
+      @shoot_bullet(@player.bullet_radius)
     # if @keys.SHIFT
     #   if @player.fire_juice > 0
     #     @shoot_bullet 0.20
@@ -320,19 +317,19 @@ LEVEL_INTRO_TIME = 2500
   random_y_coord : () ->
     _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE)
 
-   toggle_debug: () ->
-     if @debug?
-      @debug = !@debug
-     else
-      @debug = true
-      @autoclear = false
-      debugDraw = new b2DebugDraw()
-      debugDraw.SetSprite(this)
-      debugDraw.SetDrawScale(SCALE)
-      debugDraw.SetFillAlpha(0.3)
-      debugDraw.SetLineThickness(1.0)
-      debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
-      @world.SetDebugDraw(debugDraw)
+  toggle_debug: () ->
+    if @debug?
+     @debug = !@debug
+    else
+     @debug = true
+     @autoclear = false
+     debugDraw = new b2DebugDraw()
+     debugDraw.SetSprite(this)
+     debugDraw.SetDrawScale(SCALE)
+     debugDraw.SetFillAlpha(0.3)
+     debugDraw.SetLineThickness(1.0)
+     debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
+     @world.SetDebugDraw(debugDraw)
 
   draw_hp_bar : ->
     bar_w = 100
