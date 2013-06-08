@@ -15,19 +15,8 @@ drawing =
     ctx.beginPath()
     #ctx.moveTo((asteroid.x + asteroid.points[0].x) * SCALE, (asteroid.y + asteroid.points[0].y) * SCALE)
     for point, i in asteroid.points
-      x_offset = 0
-      # if point.x > asteroid.x
-      #   x_offset = -line_width * 2
-      # else if point.x < asteroid.x
-      #   x_offset = line_width * 2
-
-      y_offset = 0
-      # if point.y > asteroid.y
-      #   y_offset = -line_width * 2
-      # else if point.y < asteroid.y
-      #   y_offset = line_width * 2
       f = if i == 0 then 'moveTo' else 'lineTo'
-      ctx[f](x_offset + ((point.x + asteroid.x) * SCALE), y_offset + ((point.y + asteroid.y) * SCALE))
+      ctx[f]((point.x + asteroid.x) * SCALE, (point.y + asteroid.y) * SCALE)
     ctx.closePath()
     #ctx.fill()
     ctx.stroke()
@@ -61,10 +50,9 @@ drawing =
     ctx.strokeStyle = '#9370db'#'white'#'#32cd32'
     ctx.lineWidth = MIN_LINE_WIDTH + Math.max(0, player.hp * 4 / 25)
     ctx.beginPath()
-    ctx.moveTo((player.x + player.points[0].x) * SCALE, (player.y + player.points[0].y) * SCALE)
-    for point in player.points
-       ctx.lineTo((point.x + player.x) * SCALE, (point.y + player.y) * SCALE)
-    ctx.lineTo((player.x + player.points[0].x) * SCALE, (player.y + player.points[0].y) * SCALE)
+    for point, i in player.points
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((point.x + player.x) * SCALE, (point.y + player.y) * SCALE)
     ctx.closePath()
     ctx.stroke()
     ctx.restore()
@@ -146,7 +134,6 @@ drawing =
     ctx.arc(x, y, display_radius, 0, TWO_PI, true)
     ctx.closePath()
     gradient = ctx.createRadialGradient(x, y, 0, x, y, display_radius)
-        #(0, SCALE * particle.radius, 0, 0, SCALE * particle.radius, 30)
     gradient.addColorStop(0.05, "rgba(255,255,255, #{0.7 * (1 - age / MAX_PARTICLE_AGE)})")
     gradient.addColorStop(1, "rgba(105, 210, 231, 0)") #'#69D2E7'
     ctx.fillStyle = gradient
