@@ -184,19 +184,7 @@ LEVEL_INTRO_TIME = 2500
     #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
     particle = create_game_object[PARTICLE](radius, x, y)
     @game_objects[particle.guid] = particle
-    body_def = new b2BodyDef
-    body_def.type = b2Body.b2_dynamicBody
-    fix_def = new b2FixtureDef
-    fix_def.density = 0.5
-    fix_def.friction = 5.0
-    fix_def.restitution = 0.2
-
-    fix_def.shape = new b2CircleShape(particle.radius)
-    fix_def.restitution = 0.4
-    body_def.position.x = particle.x
-    body_def.position.y = particle.y
-    body_def.userData = particle.guid
-    particle_body = @world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+    particle_body = physics_helper.get_physics_setup_fn(particle)(particle, @world)
     particle_body.SetLinearVelocity(physics_body.GetLinearVelocity())
     particle_angle = (angle + PI) % TWO_PI
     particle_body.ApplyImpulse(new b2Vec2(Math.cos(particle_angle) * pow,

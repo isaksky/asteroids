@@ -100,6 +100,22 @@ setup_physics_fns_by_type[BULLET] = (bullet, world, player_body, player) ->
     )
   body.SetLinearVelocity(bullet_vel)
 
+setup_physics_fns_by_type[PARTICLE] = (particle, world) ->
+  body_def = new b2BodyDef
+  body_def.type = b2Body.b2_dynamicBody
+  fix_def = new b2FixtureDef
+  fix_def.density = 0.5
+  fix_def.friction = 5.0
+  fix_def.restitution = 0.2
+
+  fix_def.shape = new b2CircleShape(particle.radius)
+  fix_def.restitution = 0.4
+  body_def.position.x = particle.x
+  body_def.position.y = particle.y
+  body_def.userData = particle.guid
+  particle_body = world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+  particle_body
+
 @physics_helper =
   get_physics_setup_fn : (game_object) ->
     setup_physics_fns_by_type[game_object.type] || if game_object.radius? then setup_circular_physics_body else setup_physics_for_polygon
