@@ -1,3 +1,7 @@
+POWERUP_PULSE_TICKS = 200
+HALF_POWERUP_PULSE_TICKS = POWERUP_PULSE_TICKS / 2
+POWERUP_PULSE_GROWTH_F = 0.2
+
 drawing =
   draw_asteroid : (ctx, asteroid) ->
     return if asteroid.invuln_ticks % 8 > 3
@@ -170,16 +174,30 @@ drawing =
     ctx.restore()
 
   draw_bullet_radius_powerup : (ctx, powerup) ->
-    display_radius = SCALE * powerup.radius
+    powerup.pulse_tick = 0 unless powerup.pulse_tick?
+
+    display_radius = SCALE * powerup.radius * 2
+    display_radius *= 1 + (if powerup.pulse_tick > HALF_POWERUP_PULSE_TICKS then 1 else -1)*((powerup.pulse_tick - HALF_POWERUP_PULSE_TICKS) / HALF_POWERUP_PULSE_TICKS) * POWERUP_PULSE_GROWTH_F
     ctx.save()
-    ctx.beginPath()
+
     x = powerup.x * SCALE
     y = powerup.y * SCALE
+
+    ctx.beginPath()
+    inner_circle_size = 10 #SCALE * display_radius * 0.95
+    gradient_size = 100 #SCALE * display_radius * 2
+    gradient = ctx.createRadialGradient(x, y, 0, x, y, display_radius)
+    gradient.addColorStop(0.15, "rgba(200, 200, 255, 1)")
+    gradient.addColorStop(1, "rgba(0, 0, 255, 0)") #'#69D2E7'
+    ctx.fillStyle = gradient
+
     ctx.arc(x, y, display_radius, 0, TWO_PI, true)
     ctx.closePath()
-    ctx.fillStyle = powerup.color #"rgba(255,0,0,0.6)"
+    #ctx.fillStyle = powerup.color #"rgba(255,0,0,0.6)"
     ctx.fill()
     ctx.restore()
+    powerup.pulse_tick += 1
+    powerup.pulse_tick %= POWERUP_PULSE_TICKS
 
 # loljs export
 @drawing = drawing
