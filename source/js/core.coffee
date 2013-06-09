@@ -13,7 +13,7 @@ b2AABB = Box2D.Collision.b2AABB
 
 LEVEL_INTRO_TIME = 2500
 MAX_PLACEMENT_ATTEMPTS = 50
-PLACEMENT_OFFSET = 3
+PLACEMENT_OFFSET = 2
 
 @game = Sketch.create
   container : document.getElementById "container"
@@ -82,7 +82,7 @@ PLACEMENT_OFFSET = 3
               y = @random_y_coord()
               attempts += 1
           _.log "Reached max placement attempts" if attempts == MAX_PLACEMENT_ATTEMPTS
-          game_object = create_game_object[object_type](@random_x_coord(), @random_y_coord(), invuln_ticks)
+          game_object = create_game_object[object_type](x, y, invuln_ticks)
           @game_objects[game_object.guid] = game_object
           physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
     else if levels[@level_idx + 1]?
