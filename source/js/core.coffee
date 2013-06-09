@@ -9,8 +9,11 @@ b2MassData = Box2D.Collision.Shapes.b2MassData
 b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
+b2AABB = Box2D.Collision.b2AABB
 
 LEVEL_INTRO_TIME = 2500
+MAX_PLACEMENT_ATTEMPTS = 50
+PLACEMENT_OFFSET = 3
 
 @game = Sketch.create
   container : document.getElementById "container"
@@ -57,16 +60,31 @@ LEVEL_INTRO_TIME = 2500
       _.log "Sending next wave!"
       @prev_wave_spawned_by_level[@level_idx] = wave_idx
       @wave_start_time = _.now()
+
       for object_type_name, quantity of wave.spawns
         object_type = window[object_type_name.toUpperCase()]
         quantity = Math.ceil(quantity * (@height * @width / (1280 * 800))) # normalize quantity by window size
         _.log "creating #{quantity} of type #{object_type} : #{ENUM_NAME_BY_TYPE[object_type]}"
-        _(quantity).times =>
+
+
+        for i in [0..quantity]
+          attempts = 1
           invuln_ticks = if @level_idx == 0 && wave_idx == 0 then 0 else 60
+          x = @random_x_coord()
+          y = @random_y_coord()
+          offset_multiplier = 3
+          while attempts <= MAX_PLACEMENT_ATTEMPTS && _.is_point_in_rect(x, y,
+            @player.x - PLACEMENT_OFFSET,
+            @player.y - PLACEMENT_OFFSET,
+            @player.x + PLACEMENT_OFFSET,
+            @player.y + PLACEMENT_OFFSET)
+              x = @random_x_coord()
+              y = @random_y_coord()
+              attempts += 1
+          _.log "Reached max placement attempts" if attempts == MAX_PLACEMENT_ATTEMPTS
           game_object = create_game_object[object_type](@random_x_coord(), @random_y_coord(), invuln_ticks)
           @game_objects[game_object.guid] = game_object
           physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
-
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
       JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.9)

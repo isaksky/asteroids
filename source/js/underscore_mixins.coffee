@@ -98,3 +98,6 @@ _.mixin
         new_y = d * Math.sin(new_angle)
         ret.push({x : new_x, y : new_y})
     ret
+
+  is_point_in_rect : (x, y, rect_x_min, rect_y_min, rect_x_max, rect_y_max) ->
+    x >= rect_x_min && x <= rect_x_max && y >= rect_y_min && y <= rect_y_max

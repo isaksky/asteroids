@@ -1,3 +1,8 @@
+@PI         = Math.PI
+@TWO_PI     = Math.PI * 2
+@HALF_PI    = Math.PI / 2
+@QUARTER_PI = Math.PI / 4
+
 @MAX_PARTICLE_AGE = 400
 @MIN_LINE_WIDTH = 1
 @MAX_PLAYER_FIRE_JUICE = 50
