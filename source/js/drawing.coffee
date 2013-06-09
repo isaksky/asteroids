@@ -152,7 +152,7 @@ drawing =
     y = health_pack.y * SCALE
     ctx.arc(x, y, display_radius, 0, TWO_PI, true)
     ctx.closePath()
-    ctx.fillStyle = "rgba(255,0,0,0.6)"
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)"
     ctx.fill()
     ctx.restore()
 
@@ -160,7 +160,7 @@ drawing =
 
     # draw the cross:
     # TODO : be a bit smarter about object creation, and possibly ctx.translate/rotate here
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'
+    ctx.fillStyle = 'rgba(255, 0 , 0,0.5)'
     ctx.beginPath()
     for pt, i in _.revolve_points_in_quadrant([
       {x:health_pack.radius * 0.8, y: health_pack.radius * 0.2}
