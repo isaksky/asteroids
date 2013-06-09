@@ -34,3 +34,7 @@ test "is_clockwise_of", ->
     a1 = (i + 1) * 0.5
     a2 = i * 0.5
     equal _.is_clockwise_of(a1, a2), true, "#i: #{i}"
+
+# cant test because javascript floats
+# test "revolve_points_in_quadrant", ->
+#   equal _.revolve_points_in_quadrant([{x:1,y:1}]), [{"x":1,"y":1},{"x":-1,"y":1},{"x":-1,"y":-1},{"x":2,"y":-1}]
