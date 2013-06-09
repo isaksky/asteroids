@@ -1,3 +1,7 @@
+@graveyards_by_type = {}
+@graveyards_by_type[PARTICLE] = []
+@graveyards_by_type[BULLET] = []
+
 flip_around_hor = (pt) ->
   {x:pt.x, y: -pt.y}
 
@@ -33,11 +37,12 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 # Gotta use this type of object construction instead of object literal,
 # because coffeescript doesn't eval the keys :(
 @create_game_object[PARTICLE] = (radius, x, y) ->
-  particle =
-    x       : x
-    y       : y
-    radius  : radius
-    hp      : 1
+  particle = graveyards_by_type[PARTICLE].pop() || {}
+  particle.radius = radius
+  particle.x = x
+  particle.y = y
+  particle.hp = 1
+
   particle.mass = radius / 100
   particle.start_time = _.now()
   particle
@@ -49,7 +54,13 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   ship
 
 @create_game_object[BULLET] = (radius, x, y, source_object_guid) ->
-  bullet = {type: BULLET, radius, x, y, source_object_guid, hp: 1, mass : radius}
+  bullet = graveyards_by_type[BULLET].pop() || {}
+  bullet.radius = radius
+  bullet.x = x
+  bullet.y = y
+  bullet.source_object_guid = source_object_guid
+  bullet.hp = 1
+  bullet.mass = radius
   bullet.start_time = _.now()
   bullet.color = if radius > SMALLEST_BULLET_RADIUS then _.random(COLOR_PALLETE_1) else _.random(COLOR_PALETTE_2)
   bullet

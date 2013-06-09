@@ -303,6 +303,8 @@ PLACEMENT_OFFSET = 2
     for o in graveyard
       point_value = POINTS_BY_TYPE[o.type]
       @score += point_value if point_value?
+      if graveyards_by_type[o.type]?
+        graveyards_by_type[o.type].push o
       delete @game_objects[o.guid]
 
     # if @enemies_remaining == 0
