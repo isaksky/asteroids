@@ -13,20 +13,21 @@
 @BASE_BULLET_COST = 3
 
 @ENUM_NAME_BY_TYPE = {}
-def_enums = (() =>
+def_enums = do =>
   enum_i = 0
-  ((vals...) =>
+  (vals...) =>
     vals.sort()
     for v in vals
       @[v] = enum_i
       @ENUM_NAME_BY_TYPE[enum_i] = v.toLowerCase()
-      enum_i += 1))()
+      enum_i += 1
 
-def_enums "ASTEROID", "BULLET", "HEALTH_PACK", "JERK", "PARTICLE", "SHIP", "BULLET_RADIUS_POWERUP"
+def_enums "ASTEROID", "BULLET", "HEALTH_PACK", "JERK", "PARTICLE", "SHIP", "BULLET_RADIUS_POWERUP", "BUB"
 
 @POINTS_BY_TYPE = {}
 POINTS_BY_TYPE[ASTEROID] = 50
 POINTS_BY_TYPE[JERK] = 500
+POINTS_BY_TYPE[BUB] = 400
 
 # Percent of the time when a game object type will drop something when killed
 @DROP_PCT_BY_TYPE = {}

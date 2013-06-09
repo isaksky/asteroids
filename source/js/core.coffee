@@ -14,6 +14,8 @@ b2AABB = Box2D.Collision.b2AABB
 LEVEL_INTRO_TIME = 2500
 MAX_PLACEMENT_ATTEMPTS = 50
 PLACEMENT_OFFSET = 2
+jerk_base_engine_power = 0.01
+bub_base_engine_power = 0.005
 
 @game = Sketch.create
   container : document.getElementById "container"
@@ -87,7 +89,9 @@ PLACEMENT_OFFSET = 2
           physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
-      JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.9)
+      JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.8)
+      jerk_base_engine_power *= 1.3
+      bub_base_engine_power *= 1.3
       @level_idx += 1
       @prev_wave_spawned_by_level[@level_idx] = -1
       @level_start_time = _.now()
@@ -156,8 +160,8 @@ PLACEMENT_OFFSET = 2
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
-      else if contact_info[BULLET] && contact_info[JERK]
-        contact_info[JERK].hp -= force
+      else if contact_info[BULLET] && (contact_info[JERK] || contact_info[BUB])
+        (contact_info[JERK] || contact_info[BUB]).hp -= force
         contact_info[BULLET].hp = 0
 
     @world.SetContactListener(listener)
@@ -231,7 +235,7 @@ PLACEMENT_OFFSET = 2
     #  angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
     is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
     if jerk.current_charge_start
-      @gas(jerk, jerk_body, false, 0.07)
+      @gas(jerk, jerk_body, false, Math.max(0.07, jerk_base_engine_power * 3))
       if _.now() - jerk.current_charge_start > @jerk_charge_duration
         jerk.current_charge_start = null
     else if is_off_screen
@@ -241,12 +245,34 @@ PLACEMENT_OFFSET = 2
       if jerk.aim > JERK_AIM_TIME
         jerk.current_charge_start = _.now()
         _.log "ATTACK!"
+      #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
     else
-      jerk.aim = 0 if jerk.aim
+      jerk.aim -= 0.1 if jerk.aim
+      jerk.aim = 0 if jerk.aim && jerk.aim < 0
       # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
       future_jerk_angle = jerk_angle + jerk_body.GetAngularVelocity() / 3.0
-      torque = if _.is_clockwise_of(attack_angle, future_jerk_angle) then 0.1 else -0.1
+      torque = (if _.is_clockwise_of(attack_angle, future_jerk_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
       jerk_body.ApplyTorque(torque)
+      #if Math.abs(angle_diff < 0.2)
+      #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
+
+  handle_bub_ai : (bub, bub_body) ->
+    dx =  player.x - bub.x
+    dy = player.y - bub.y
+    attack_angle = _.normalize_angle(Math.atan2(dy, dx))
+    bub_angle = bub.angle
+    angle_diff = _.normalize_angle(bub_angle - attack_angle)
+    is_off_screen = bub.x > @width / SCALE || bub.x < 0 || bub.y < 0 || bub.y > @width / SCALE
+
+    if is_off_screen
+      @gas(bub, bub_body, false, bub_base_engine_power * 2)
+    else
+      # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
+      future_bub_angle = bub_angle + bub_body.GetAngularVelocity() / 3.0
+      torque = (if _.is_clockwise_of(attack_angle, future_bub_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
+      bub_body.ApplyTorque(torque)
+      #if Math.abs(angle_diff < 0.2)
+      @gas(bub, bub_body, false, bub_base_engine_power) unless bub.invuln_ticks
 
 
   update : ->
@@ -296,7 +322,8 @@ PLACEMENT_OFFSET = 2
             y : pos.y
             angle : body.GetAngle()
           @handle_jerk_ai(game_object, body) if game_object.type == JERK
-      @enemies_remaining += 1 if game_object.type == ASTEROID || game_object.type == JERK
+          @handle_bub_ai(game_object, body) if game_object.type == BUB
+      @enemies_remaining += 1 if POINTS_BY_TYPE[game_object.type]?
       game_object.invuln_ticks -= 1 if game_object.invuln_ticks
       body = body.m_next
 

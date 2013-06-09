@@ -87,6 +87,14 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   calc_game_object_bounds(jerk)
   jerk
 
+@create_game_object[BUB] = (x, y, invuln_ticks = 30) ->
+  bub = {x, y, invuln_ticks}
+  bub.color = '#24913C'
+  bub.hp = bub.max_hp = 15
+  bub.points = reflect_finish([{x: 0.475, y: 0}, {x: 0.375, y: 0.1}, {x : 0.15, y : 0.1}, {x: 0, y: 0.2}]) #reflect_finish([{x: 0.75, y: 0}, {x: 0.6, y: 0.2}, {x: 0, y: 0.3}])
+  calc_game_object_bounds(bub)
+  bub
+
 @create_game_object[HEALTH_PACK] = (x, y, amt = 8) ->
   powerup = {x, y, hp:1}
   powerup.radius = 0.2

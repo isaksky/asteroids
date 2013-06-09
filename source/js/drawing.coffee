@@ -75,15 +75,16 @@ drawing =
     ctx.strokeStyle = jerk.color
     ctx.lineWidth = MIN_LINE_WIDTH + jerk.hp * 4 / jerk.max_hp
     ctx.beginPath()
-    ctx.moveTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
-    for point in jerk.points
-       ctx.lineTo((point.x + jerk.x) * SCALE, (point.y + jerk.y) * SCALE)
-    ctx.lineTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
+    #ctx.moveTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
+    for point, i in jerk.points
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((point.x + jerk.x) * SCALE, (point.y + jerk.y) * SCALE)
+    #ctx.lineTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
     ctx.closePath()
     ctx.stroke()
     ctx.restore()
 
-    if jerk.aim > 0
+    if jerk.aim > 1
       ctx.save()
       pct_charged = jerk.aim / JERK_AIM_TIME
       gradient_size = 0.3 * SCALE# * pct_charged
@@ -96,6 +97,29 @@ drawing =
       ctx.closePath()
       ctx.fill()
       ctx.restore()
+
+  draw_bub : (ctx, bub) ->
+    return if bub.invuln_ticks % 8 > 3
+    x = bub.x * SCALE + (bub.max_x / 3 * SCALE) * Math.cos(bub.angle)
+    y = bub.y * SCALE + (bub.max_x / 3 * SCALE) * Math.sin(bub.angle)
+    ctx.save()
+
+    ctx.globalCompositeOperation = "lighter"
+    #ctx.globalAlpha = 0.6
+    ctx.translate(bub.x * SCALE, bub.y * SCALE)
+    ctx.rotate(bub.angle)
+    ctx.translate(-(bub.x) * SCALE, -(bub.y) * SCALE)
+    ctx.strokeStyle = bub.color
+    ctx.lineWidth = MIN_LINE_WIDTH + bub.hp * 2 / bub.max_hp
+    ctx.beginPath()
+    #ctx.moveTo((bub.x + bub.points[0].x) * SCALE, (bub.y + bub.points[0].y) * SCALE)
+    for point, i in bub.points
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((point.x + bub.x) * SCALE, (point.y + bub.y) * SCALE)
+    #ctx.lineTo((bub.x + bub.points[0].x) * SCALE, (bub.y + bub.points[0].y) * SCALE)
+    ctx.closePath()
+    ctx.stroke()
+    ctx.restore()
 
   draw_bullet : (ctx, bullet) ->
     return if bullet.hp <= 0

@@ -86,6 +86,35 @@ setup_physics_fns_by_type[JERK] = _.compose (body) ->
   body
 , setup_physics_for_polygon
 
+setup_physics_fns_by_type[BUB] = (bub, world) ->
+  # TODO: clean up this code repetition /w above
+  fix_def = new b2FixtureDef
+  fix_def.density = 1.0
+  fix_def.friction = 0.5
+  fix_def.restitution = 0.2
+  fix_def.shape = new b2PolygonShape
+  fix_def.restitution = 0.4
+
+  fuselage_pts = _.map bub.points, (pt) ->
+    vec = new b2Vec2
+    vec.Set(pt.x, pt.y)
+    vec
+
+  fix_def.shape.SetAsArray(fuselage_pts, fuselage_pts.length)
+
+  body_def = new b2BodyDef
+  body_def.type = b2Body.b2_dynamicBody
+  body_def.position.x = bub.x
+  body_def.position.y = bub.y
+  body_def.userData = bub.guid
+  body = world.CreateBody(body_def)
+
+  Box2DSeparator.separate(body, fix_def, fuselage_pts, SCALE)
+  body.CreateFixture(fix_def)
+  body.SetAngularDamping(4.5)
+  body.SetLinearDamping(1.5)
+  body
+
 setup_physics_fns_by_type[ASTEROID] = _.compose (body) ->
   body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), body.GetWorldCenter())
   body
