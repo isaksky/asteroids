@@ -16,8 +16,16 @@ b2RevoluteJoint = Box2D.Dynamics.Joints.b2RevoluteJoint
 b2DistanceJointDef = Box2D.Dynamics.Joints.b2DistanceJointDef
 b2DistanceJoint = Box2D.Dynamics.Joints.b2DistanceJoint
 
+
+
 class @Ai
-  constructor : ({@world, @player, @player_body, @world_width, @world_height, @game_objects}) ->
+  constructor : ({@world, @player, @player_body, @world_width, @world_height, @game_objects, @game_object_settings}) ->
+
+  use_engine : (game_object, physics_body, pow = 0.04) ->
+     physics_body.ApplyImpulse(new b2Vec2(Math.cos(game_object.angle) * pow,
+       Math.sin(game_object.angle) * pow), physics_body.GetWorldCenter())
+     game_object.engines_last_used_at = _.now()
+     game_object.engine_power_last_applied = pow
 
 @Ai.prototype[JERK] = (jerk, jerk_body) ->
   dx =  @player.x - jerk.x
@@ -29,17 +37,16 @@ class @Ai
   #  angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
   is_off_screen = jerk.x > @world_width || jerk.x < 0 || jerk.y < 0 || jerk.y > @world_height
   if jerk.current_charge_start
-    @gas(jerk, jerk_body, false, Math.max(0.07, jerk_base_engine_power * 3))
-    if _.now() - jerk.current_charge_start > @jerk_charge_duration
+    @use_engine(jerk, jerk_body, Math.max(0.07, @game_object_settings.jerk_base_engine_power * 3))
+    if _.now() - jerk.current_charge_start > @game_object_settings.jerk_charge_duration
       jerk.current_charge_start = null
   else if is_off_screen
-    @gas(jerk, jerk_body, false, 0.07)
+    @use_engine(jerk, jerk_body, 0.07)
   else if Math.abs(angle_diff) < 0.05
     jerk.aim += 1
     if jerk.aim > JERK_AIM_TIME
       jerk.current_charge_start = _.now()
       _.log "ATTACK!"
-    #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
   else
     jerk.aim -= 0.1 if jerk.aim
     jerk.aim = 0 if jerk.aim && jerk.aim < 0
@@ -47,10 +54,10 @@ class @Ai
     future_jerk_angle = jerk_angle + jerk_body.GetAngularVelocity() / 3.0
     torque = (if _.is_clockwise_of(attack_angle, future_jerk_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
     jerk_body.ApplyTorque(torque)
-    #if Math.abs(angle_diff < 0.2)
-    #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
 
-@Ai::BUB = (bub, bub_body) ->
+
+
+@Ai.prototype[BUB] = (bub, bub_body) ->
   dx =  @player.x - bub.x
   dy = @player.y - bub.y
   attack_angle = _.normalize_angle(Math.atan2(dy, dx))
@@ -59,14 +66,14 @@ class @Ai
   is_off_screen = bub.x > @world_width || bub.x < 0 || bub.y < 0 || bub.y > @world_height
 
   if is_off_screen
-    @gas(bub, bub_body, false, bub_base_engine_power * 2)
+    @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power * 2)
   else
     # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
     future_bub_angle = bub_angle + bub_body.GetAngularVelocity() / 3.0
     torque = (if _.is_clockwise_of(attack_angle, future_bub_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
     bub_body.ApplyTorque(torque)
     #if Math.abs(angle_diff < 0.2)
-    @gas(bub, bub_body, false, bub_base_engine_power) unless bub.invuln_ticks
+    @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power) unless bub.invuln_ticks
 
 @Ai.prototype[SOB] = (sob, sob_body) ->
   if !sob_body.GetJointList() #no asteroids yet?

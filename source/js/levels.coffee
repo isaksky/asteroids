@@ -2,7 +2,7 @@
 
 @levels.push
   waves: [
-    {start_time: 0, spawns : {asteroid : 15, sob: 1}}
+    {start_time: 0, spawns : {asteroid : 15, sob: 1, bub: 2}}
   ]
 
 @levels.push

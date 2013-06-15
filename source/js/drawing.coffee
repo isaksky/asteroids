@@ -1,3 +1,5 @@
+import_asteroids_globals(@)
+
 POWERUP_PULSE_TICKS = 200
 HALF_POWERUP_PULSE_TICKS = POWERUP_PULSE_TICKS / 2
 POWERUP_PULSE_GROWTH_F = 0.2
@@ -100,15 +102,15 @@ drawing =
 
   draw_bub : (ctx, bub) ->
     return if bub.invuln_ticks % 8 > 3
-    x = bub.x * SCALE + (bub.max_x / 3 * SCALE) * Math.cos(bub.angle)
-    y = bub.y * SCALE + (bub.max_x / 3 * SCALE) * Math.sin(bub.angle)
+    x = bub.x * SCALE
+    y = bub.y * SCALE
     ctx.save()
 
     ctx.globalCompositeOperation = "lighter"
     #ctx.globalAlpha = 0.6
-    ctx.translate(bub.x * SCALE, bub.y * SCALE)
+    ctx.translate(x, y)
     ctx.rotate(bub.angle)
-    ctx.translate(-(bub.x) * SCALE, -(bub.y) * SCALE)
+    ctx.translate(-x, -y)
     ctx.strokeStyle = bub.color
     ctx.lineWidth = MIN_LINE_WIDTH + bub.hp * 2 / bub.max_hp
     ctx.beginPath()
@@ -119,7 +121,21 @@ drawing =
     #ctx.lineTo((bub.x + bub.points[0].x) * SCALE, (bub.y + bub.points[0].y) * SCALE)
     ctx.closePath()
     ctx.stroke()
+
+    if bub.engines_last_used_at && _.now() - bub.engines_last_used_at < 200
+      radius = bub.engine_power_last_applied / BUB_INITIAL_ENGINE_POWER * 10
+      gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
+      gradient.addColorStop(0, "rgba(255, 255, 0, 1)")
+      gradient.addColorStop(0.5, "rgba(255, 0, 0, 1)")
+      gradient.addColorStop(1, "rgba(255, 0, 0, 0)")
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(x, y, radius, -PI / 2, PI / 2, true)
+      ctx.closePath()
+      ctx.fill()
     ctx.restore()
+
+
 
   draw_sob : (ctx, sob) ->
     return if sob.invuln_ticks % 8 > 3

@@ -20,8 +20,7 @@ import_asteroids_globals(@)
 LEVEL_INTRO_TIME = 2500
 MAX_PLACEMENT_ATTEMPTS = 50
 PLACEMENT_OFFSET = 2
-jerk_base_engine_power = 0.01
-bub_base_engine_power = 0.005
+
 
 @game = Sketch.create
   container : document.getElementById "container"
@@ -29,7 +28,6 @@ bub_base_engine_power = 0.005
   max_pixels :  if "Google Inc." == window.navigator?.vendor then 1280 * 800 else 800 * 600
   setup : ->
     @waves_spawned_by_level = {}
-    @jerk_charge_duration = JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
     @score = @num_update_ticks = 0
     @finished = false
     @prev_spawn_time = _.now()
@@ -48,7 +46,13 @@ bub_base_engine_power = 0.005
     @player_body = physics_helper.get_physics_setup_fn(@player)(@player, @world)
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
-    @ai = new Ai({@world, @player, @player_body, @world_width, @world_height, @game_objects})
+
+    @game_object_settings =
+      jerk_base_engine_power : 0.01
+      bub_base_engine_power : BUB_INITIAL_ENGINE_POWER
+      jerk_charge_duration : JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
+
+    @ai = new Ai({@world, @player, @player_body, @world_width, @world_height, @game_objects, @game_object_settings})
 
     @start_next_wave_or_level()
     @start_collision_detection()
@@ -98,8 +102,8 @@ bub_base_engine_power = 0.005
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
       JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.8)
-      jerk_base_engine_power *= 1.3
-      bub_base_engine_power *= 1.3
+      @game_object_settings.jerk_base_engine_power *= 1.3
+      @game_object_settings.bub_base_engine_power *= 1.3
       @level_idx += 1
       @prev_wave_spawned_by_level[@level_idx] = -1
       @level_start_time = _.now()
@@ -284,9 +288,6 @@ bub_base_engine_power = 0.005
           joint_aux = body.GetJointList()
 
           if joint_aux
-            unless @weh
-              @weh = true
-              debugger
             if !game_object.joints?
               game_object.joints = []
             else
