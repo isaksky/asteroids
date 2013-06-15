@@ -10,6 +10,12 @@ b2PolygonShape = Box2D.Collision.Shapes.b2PolygonShape
 b2CircleShape = Box2D.Collision.Shapes.b2CircleShape
 b2DebugDraw = Box2D.Dynamics.b2DebugDraw
 b2AABB = Box2D.Collision.b2AABB
+b2RevoluteJointDef = Box2D.Dynamics.Joints.b2RevoluteJointDef
+b2RevoluteJoint = Box2D.Dynamics.Joints.b2RevoluteJoint
+b2DistanceJointDef = Box2D.Dynamics.Joints.b2DistanceJointDef
+b2DistanceJoint = Box2D.Dynamics.Joints.b2DistanceJoint
+
+import_asteroids_globals(@)
 
 LEVEL_INTRO_TIME = 2500
 MAX_PLACEMENT_ATTEMPTS = 50
@@ -32,15 +38,17 @@ bub_base_engine_power = 0.005
     gravity = new b2Vec2(0, 0)#random(-0.5, 0.5), random(-0.5, 0.5))
     allow_sleep = true
     @world = new b2World(gravity, allow_sleep)
+    @world_width = @width / SCALE
+    @world_height = @height / SCALE
 
-    @player = create_game_object[SHIP](@width / SCALE / 2, @height / SCALE / 2)
+    @player = create_game_object[SHIP](@world_width / 2, @world_height / 2)
     @player.is_player = true
-    window.player = @player
     @game_objects[@player.guid] = @player
 
     @player_body = physics_helper.get_physics_setup_fn(@player)(@player, @world)
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
+    @ai = new Ai({@world, @player, @player_body, @world_width, @world_height, @game_objects})
 
     @start_next_wave_or_level()
     @start_collision_detection()
@@ -160,8 +168,8 @@ bub_base_engine_power = 0.005
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
-      else if contact_info[BULLET] && (contact_info[JERK] || contact_info[BUB])
-        (contact_info[JERK] || contact_info[BUB]).hp -= force
+      else if contact_info[BULLET] && (contact_info[JERK] || contact_info[BUB] || contact_info[SOB])
+        (contact_info[JERK] || contact_info[BUB] || contact_info[SOB]).hp -= force
         contact_info[BULLET].hp = 0
 
     @world.SetContactListener(listener)
@@ -177,15 +185,15 @@ bub_base_engine_power = 0.005
   # wrap object to other side of screen if its not on screen
   wrap_object : (body) ->
     pos = body.GetPosition()
-    if pos.x > @width / SCALE + EDGE_OFFSET
+    if pos.x > @world_width + EDGE_OFFSET
       new_x = -EDGE_OFFSET
     else if pos.x < 0 - EDGE_OFFSET
-      new_x = @width / SCALE + EDGE_OFFSET
+      new_x = @world_width + EDGE_OFFSET
 
-    if pos.y > @height / SCALE + EDGE_OFFSET
+    if pos.y > @world_height + EDGE_OFFSET
       new_y = -EDGE_OFFSET
     else if pos.y < 0 - EDGE_OFFSET
-      new_y = @height / SCALE + EDGE_OFFSET
+      new_y = @world_height + EDGE_OFFSET
 
     if new_x? || new_y?
       new_x = pos.x unless new_x?
@@ -202,13 +210,14 @@ bub_base_engine_power = 0.005
     x = game_object.x + (offset + radius) * Math.cos(angle + PI)
     y = game_object.y + (offset + radius) * Math.sin(angle + PI)
     #_.log "player [#{player.x}, #{@player.y}, #{player.angle}] bullet [#{x}, #{y}]"
-    particle = create_game_object[PARTICLE](radius, x, y)
-    @game_objects[particle.guid] = particle
-    particle_body = physics_helper.get_physics_setup_fn(particle)(particle, @world)
-    particle_body.SetLinearVelocity(physics_body.GetLinearVelocity())
-    particle_angle = (angle + PI) % TWO_PI
-    particle_body.ApplyImpulse(new b2Vec2(Math.cos(particle_angle) * pow,
-      Math.sin(particle_angle) * pow), physics_body.GetWorldCenter())
+    if game_object.type == SHIP
+      particle = create_game_object[PARTICLE](radius, x, y)
+      @game_objects[particle.guid] = particle
+      particle_body = physics_helper.get_physics_setup_fn(particle)(particle, @world)
+      particle_body.SetLinearVelocity(physics_body.GetLinearVelocity())
+      particle_angle = (angle + PI) % TWO_PI
+      particle_body.ApplyImpulse(new b2Vec2(Math.cos(particle_angle) * pow,
+        Math.sin(particle_angle) * pow), physics_body.GetWorldCenter())
 
   handle_keyboard_input : ->
     if @keys.UP
@@ -225,56 +234,6 @@ bub_base_engine_power = 0.005
     #   if @player.fire_juice > 0
     #     @shoot_bullet 0.20
 
-  handle_jerk_ai : (jerk, jerk_body) ->
-    dx =  player.x - jerk.x
-    dy = player.y - jerk.y
-    attack_angle = _.normalize_angle(Math.atan2(dy, dx))
-    jerk_angle = jerk.angle
-    angle_diff = _.normalize_angle(jerk_angle - attack_angle)
-    #_.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
-    #  angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
-    is_off_screen = jerk.x > @width / SCALE || jerk.x < 0 || jerk.y < 0 || jerk.y > @width / SCALE
-    if jerk.current_charge_start
-      @gas(jerk, jerk_body, false, Math.max(0.07, jerk_base_engine_power * 3))
-      if _.now() - jerk.current_charge_start > @jerk_charge_duration
-        jerk.current_charge_start = null
-    else if is_off_screen
-      @gas(jerk, jerk_body, false, 0.07)
-    else if Math.abs(angle_diff) < 0.05
-      jerk.aim += 1
-      if jerk.aim > JERK_AIM_TIME
-        jerk.current_charge_start = _.now()
-        _.log "ATTACK!"
-      #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
-    else
-      jerk.aim -= 0.1 if jerk.aim
-      jerk.aim = 0 if jerk.aim && jerk.aim < 0
-      # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
-      future_jerk_angle = jerk_angle + jerk_body.GetAngularVelocity() / 3.0
-      torque = (if _.is_clockwise_of(attack_angle, future_jerk_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
-      jerk_body.ApplyTorque(torque)
-      #if Math.abs(angle_diff < 0.2)
-      #@gas(jerk, jerk_body, false, jerk_base_engine_power) unless jerk.invuln_ticks
-
-  handle_bub_ai : (bub, bub_body) ->
-    dx =  player.x - bub.x
-    dy = player.y - bub.y
-    attack_angle = _.normalize_angle(Math.atan2(dy, dx))
-    bub_angle = bub.angle
-    angle_diff = _.normalize_angle(bub_angle - attack_angle)
-    is_off_screen = bub.x > @width / SCALE || bub.x < 0 || bub.y < 0 || bub.y > @width / SCALE
-
-    if is_off_screen
-      @gas(bub, bub_body, false, bub_base_engine_power * 2)
-    else
-      # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
-      future_bub_angle = bub_angle + bub_body.GetAngularVelocity() / 3.0
-      torque = (if _.is_clockwise_of(attack_angle, future_bub_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
-      bub_body.ApplyTorque(torque)
-      #if Math.abs(angle_diff < 0.2)
-      @gas(bub, bub_body, false, bub_base_engine_power) unless bub.invuln_ticks
-
-
   update : ->
     return if @finished
     @player.fire_juice += 0.5
@@ -283,8 +242,8 @@ bub_base_engine_power = 0.005
     @handle_keyboard_input()
 
     #bottom
-    step_rate = @dt / 1000
-    @world.Step(step_rate, 10, 10)
+    #step_rate = @dt / 1000
+    @world.Step(1 / 60, 10, 10)
     @world.DrawDebugData() if @debug
     @world.ClearForces()
 
@@ -321,8 +280,30 @@ bub_base_engine_power = 0.005
             x : pos.x
             y : pos.y
             angle : body.GetAngle()
-          @handle_jerk_ai(game_object, body) if game_object.type == JERK
-          @handle_bub_ai(game_object, body) if game_object.type == BUB
+
+          joint_aux = body.GetJointList()
+
+          if joint_aux
+            unless @weh
+              @weh = true
+              debugger
+            if !game_object.joints?
+              game_object.joints = []
+            else
+              game_object.joints.length = 0
+            while joint_aux?
+              joint = joint_aux.joint
+
+              #debugger
+              attached_pos = joint.GetBodyB().GetPosition()
+              game_object.joints.push
+                x : attached_pos.x
+                y : attached_pos.y
+              joint_aux = joint_aux.next
+          else if game_object.joints?
+            delete game_object.joints
+
+          @ai[game_object.type]?(game_object, body)
       @enemies_remaining += 1 if POINTS_BY_TYPE[game_object.type]?
       game_object.invuln_ticks -= 1 if game_object.invuln_ticks
       body = body.m_next
@@ -359,7 +340,7 @@ bub_base_engine_power = 0.005
       @start_next_wave_or_level()
 
   random_x_coord : () ->
-    random(@width / 10 / SCALE, (@width - @width / 10) / SCALE)
+    _.random(@width / 10 / SCALE, (@width - @width / 10) / SCALE)
 
   random_y_coord : () ->
     _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE)

@@ -115,6 +115,35 @@ setup_physics_fns_by_type[BUB] = (bub, world) ->
   body.SetLinearDamping(1.5)
   body
 
+setup_physics_fns_by_type[SOB] = (sob, world) ->
+  # TODO: clean up this code repetition /w above
+  fix_def = new b2FixtureDef
+  fix_def.density = 4.0
+  fix_def.friction = 0.5
+  fix_def.restitution = 0.2
+  fix_def.shape = new b2PolygonShape
+  fix_def.restitution = 0.4
+
+  fuselage_pts = _.map sob.points, (pt) ->
+    vec = new b2Vec2
+    vec.Set(pt.x, pt.y)
+    vec
+
+  fix_def.shape.SetAsArray(fuselage_pts, fuselage_pts.length)
+
+  body_def = new b2BodyDef
+  body_def.type = b2Body.b2_dynamicBody
+  body_def.position.x = sob.x
+  body_def.position.y = sob.y
+  body_def.userData = sob.guid
+  body = world.CreateBody(body_def)
+
+  Box2DSeparator.separate(body, fix_def, fuselage_pts, SCALE)
+  body.CreateFixture(fix_def)
+  body.SetAngularDamping(4.5)
+  body.SetLinearDamping(1.5)
+  body
+
 setup_physics_fns_by_type[ASTEROID] = _.compose (body) ->
   body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), body.GetWorldCenter())
   body

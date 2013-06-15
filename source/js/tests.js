@@ -1,7 +1,7 @@
-//= require underscore_mixins.js
-//= require constants.js
-//= require drawing.js
-//= require game_objects.js
+//= require underscore_mixins
+//= require globals
+//= require drawing
+//= require game_objects
 
-//= require vendor/qunit-1.11.0.js
-//= require test_cases.js
+//= require vendor/qunit-1.11.0
+//= require test_cases

@@ -1,3 +1,5 @@
+import_asteroids_globals(@)
+
 @graveyards_by_type = {}
 @graveyards_by_type[PARTICLE] = []
 @graveyards_by_type[BULLET] = []
@@ -95,6 +97,14 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   calc_game_object_bounds(bub)
   bub
 
+@create_game_object[SOB] = (x, y, invuln_ticks = 0) ->
+  sob = {x, y, invuln_ticks}
+  sob.color = '#FFBC00'
+  sob.hp = sob.max_hp = 350
+  sob.points = _.revolve_points_in_quadrant([{x:0.65, y: 0}, {x : 0.17, y : 0.17}, {x : 0, y: 0.65}])
+  calc_game_object_bounds(sob)
+  sob
+
 @create_game_object[HEALTH_PACK] = (x, y, amt = 8) ->
   powerup = {x, y, hp:1}
   powerup.radius = 0.2
@@ -108,7 +118,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   powerup.radius = 0.2
   powerup.color = "#0033ff"
   powerup.consume = (ship) ->
-    ship.bullet_radius *= 1.2
+    ship.bullet_radius *= 1.02
   powerup
 
 # Add the type field to all the game objects

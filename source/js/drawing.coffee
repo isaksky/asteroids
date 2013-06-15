@@ -121,6 +121,48 @@ drawing =
     ctx.stroke()
     ctx.restore()
 
+  draw_sob : (ctx, sob) ->
+    return if sob.invuln_ticks % 8 > 3
+    x = sob.x * SCALE + (sob.max_x / 3 * SCALE) * Math.cos(sob.angle)
+    y = sob.y * SCALE + (sob.max_x / 3 * SCALE) * Math.sin(sob.angle)
+    ctx.save()
+
+    ctx.globalCompositeOperation = "lighter"
+    #ctx.globalAlpha = 0.6
+    ctx.translate(sob.x * SCALE, sob.y * SCALE)
+    ctx.rotate(sob.angle)
+    ctx.translate(-(sob.x) * SCALE, -(sob.y) * SCALE)
+    ctx.strokeStyle = sob.color
+    ctx.lineWidth = MIN_LINE_WIDTH + sob.hp * 2 / sob.max_hp
+    ctx.beginPath()
+    for point, i in sob.points
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((point.x + sob.x) * SCALE, (point.y + sob.y) * SCALE)
+    ctx.closePath()
+    ctx.stroke()
+    ctx.restore()
+
+    if sob.joints?
+      ctx.save()
+      ctx.lineWidth = 1
+      ctx.strokeStyle = 'red'
+
+      for j in sob.joints
+        ctx.beginPath()
+        ctx.moveTo(sob.x * SCALE, sob.y * SCALE)
+        ctx.lineTo(j.x * SCALE, j.y * SCALE)
+        ctx.closePath()
+        ctx.stroke()
+      # for guid, game_object of sob.nearby_game_objects
+      #   ctx.beginPath()
+      #   ctx.moveTo(sob.x * SCALE, sob.y * SCALE)
+      #   ctx.lineTo(game_object.x * SCALE, game_object.y * SCALE)
+      #   ctx.closePath()
+      #   ctx.stroke()
+      ctx.restore()
+
+
+
   draw_bullet : (ctx, bullet) ->
     return if bullet.hp <= 0
     age = _.now() - bullet.start_time

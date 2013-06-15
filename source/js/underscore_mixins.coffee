@@ -67,16 +67,37 @@ _.mixin
       break if res
     res
 
+  # revolve_points_in_quadrant : (pts) ->
+  #   ret = pts.slice()
+  #   for angle in [HALF_PI..(3 * HALF_PI)] by HALF_PI
+  #     for pt in pts
+  #       d = Math.sqrt(pt.x * pt.x + pt.y * pt.y)
+  #       orig_angle = Math.atan2(pt.y, pt.x)
+  #       new_angle = orig_angle + angle
+  #       new_x = d * Math.cos(new_angle)
+  #       new_y = d * Math.sin(new_angle)
+  #       ret.push({x : new_x, y : new_y})
+  #   ret
+
   revolve_points_in_quadrant : (pts) ->
     ret = pts.slice()
-    for angle in [HALF_PI..(3 * HALF_PI)] by HALF_PI
-      for pt in pts
-        d = Math.sqrt(pt.x * pt.x + pt.y * pt.y)
-        orig_angle = Math.atan2(pt.y, pt.x)
-        new_angle = orig_angle + angle
-        new_x = d * Math.cos(new_angle)
-        new_y = d * Math.sin(new_angle)
-        ret.push({x : new_x, y : new_y})
+    # copy around vertical
+    i = pts.length
+    while i
+      i -= 1
+      pt_to_flip = pts[i]
+      unless pt_to_flip.x == 0
+        pt = {x: -pt_to_flip.x, y : pt_to_flip.y}
+        ret.push(pt)
+
+    # copy around horizontal
+    i = ret.length
+    while i
+      i -= 1
+      pt_to_flip = ret[i]
+      unless pt_to_flip.y == 0
+        pt = {x: pt_to_flip.x, y : -pt_to_flip.y}
+        ret.push(pt)
     ret
 
   is_point_in_rect : (x, y, rect_x_min, rect_y_min, rect_x_max, rect_y_max) ->

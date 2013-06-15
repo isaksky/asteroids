@@ -1,10 +1,12 @@
 #= require underscore_mixins
-#= require constants
+#= require globals
 #= require util
 #= require drawing
 #= require game_objects
 #= require levels
 #= require physics
+#
+import_asteroids_globals(@)
 
 flip_around_hor = (pt) ->
   {x:pt.x, y: -pt.y}

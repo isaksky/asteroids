@@ -2,8 +2,7 @@
 
 @levels.push
   waves: [
-    {start_time: 0, spawns : {asteroid : 15}}
-    {start_time : 4000, spawns: {jerk : 1}}
+    {start_time: 0, spawns : {asteroid : 15, sob: 1}}
   ]
 
 @levels.push
@@ -37,10 +36,20 @@
 
 @levels.push
   waves: [
-    {start_time: 0, spawns : {asteroid : 15, JERK : 1}}
-    {start_time: 5000, spawns : {JERK : 5, bub: 5}}
-    {start_time: 5000, spawns : {JERK : 5, bub: 3}}
-    {start_time: 5000, spawns : {JERK : 5, bub: 3}}
-    {start_time: 5000, spawns : {JERK : 5, bub: 3}}
-    {start_time: 5000, spawns : {JERK : 5, bub: 3}}
+    {start_time: 0, spawns : {asteroid : 15, jerk : 1}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 5}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+  ]
+
+@levels.push
+  waves: [
+    {start_time: 0, spawns : {asteroid : 15, jerk : 1}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 5}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
+    {start_time: 5000, spawns : {jerk : 5, bub: 3}}
   ]

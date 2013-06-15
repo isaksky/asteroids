@@ -1,9 +1,10 @@
 //= require underscore_mixins
-//= require constants
+//= require globals
 //= require util
 //= require drawing
 //= require game_objects
 //= require levels
 //= require physics
 //= require box_2d_separator
+//= require ai
 //= require core

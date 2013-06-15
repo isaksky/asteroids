@@ -1,3 +1,5 @@
+import_asteroids_globals(@)
+
 # to make testing the floating point arithmetic easier
 Number.prototype.round = (places) ->
   Math.round(@ * Math.pow(10, places)) / Math.pow(10, places)
@@ -35,6 +37,7 @@ test "is_clockwise_of", ->
     a2 = i * 0.5
     equal _.is_clockwise_of(a1, a2), true, "#i: #{i}"
 
-# cant test because javascript floats
-# test "revolve_points_in_quadrant", ->
-#   equal _.revolve_points_in_quadrant([{x:1,y:1}]), [{"x":1,"y":1},{"x":-1,"y":1},{"x":-1,"y":-1},{"x":2,"y":-1}]
+test "revolve_points_in_quadrant", ->
+  deepEqual _.revolve_points_in_quadrant([{x:1,y:1}]), [{"x":1,"y":1},{"x":-1,"y":1},{"x":-1,"y":-1},{"x":1,"y":-1}]
+  # dont duplicate points that lie on axis
+  equal _.revolve_points_in_quadrant([{x:1,y:0}, {x:0.1, y:0.1}, {x:0, y:1}]).length, 8
