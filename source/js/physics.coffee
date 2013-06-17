@@ -31,7 +31,9 @@ setup_physics_for_polygon = (game_object, world) ->
   body_def.position.y = game_object.y
   body_def.userData = game_object.guid
   #_.log guid
-  return world.CreateBody(body_def).CreateFixture(fix_def).GetBody()
+  body = world.CreateBody(body_def) #.CreateFixture(fix_def).GetBody()
+  Box2DSeparator.separate(body, fix_def, shape_points, SCALE)
+  body
 
 setup_circular_physics_body = (game_object, world) ->
   body_def = new b2BodyDef

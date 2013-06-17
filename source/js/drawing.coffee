@@ -65,8 +65,7 @@ drawing =
 
   draw_jerk : (ctx, jerk) ->
     return if jerk.invuln_ticks % 8 > 3
-    x = jerk.x * SCALE + (jerk.max_x / 3 * SCALE) * Math.cos(jerk.angle)
-    y = jerk.y * SCALE + (jerk.max_x / 3 * SCALE) * Math.sin(jerk.angle)
+
     ctx.save()
 
     ctx.globalCompositeOperation = "lighter"
@@ -77,28 +76,33 @@ drawing =
     ctx.strokeStyle = jerk.color
     ctx.lineWidth = MIN_LINE_WIDTH + jerk.hp * 4 / jerk.max_hp
     ctx.beginPath()
-    #ctx.moveTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
     for point, i in jerk.points
       f = if i == 0 then 'moveTo' else 'lineTo'
       ctx[f]((point.x + jerk.x) * SCALE, (point.y + jerk.y) * SCALE)
-    #ctx.lineTo((jerk.x + jerk.points[0].x) * SCALE, (jerk.y + jerk.points[0].y) * SCALE)
     ctx.closePath()
     ctx.stroke()
-    ctx.restore()
 
     if jerk.aim > 1
-      ctx.save()
       pct_charged = jerk.aim / JERK_AIM_TIME
       gradient_size = 0.3 * SCALE# * pct_charged
-      ctx.beginPath()
-      ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
-      gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
-      gradient.addColorStop(0, "rgba(255, 0, 0, #{pct_charged * 0.75})")
+      ctx.fillStyle = "rgba(255, 15, 15, #{pct_charged * 0.6})"
+      ctx.fill()
+
+    if jerk.engines_last_used_at && _.now() - jerk.engines_last_used_at < 200
+      x = jerk.x * SCALE
+      y = jerk.y * SCALE
+      radius = jerk.engine_power_last_applied / (JERK_INITIAL_ENGINE_POWER * 4) * 10
+      gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
+      gradient.addColorStop(0, "rgba(255, 255, 0, 1)")
+      gradient.addColorStop(0.5, "rgba(255, 0, 0, 1)")
       gradient.addColorStop(1, "rgba(255, 0, 0, 0)")
       ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.arc(x, y, radius, -PI / 2, PI / 2, true)
       ctx.closePath()
       ctx.fill()
-      ctx.restore()
+
+    ctx.restore()
 
   draw_bub : (ctx, bub) ->
     return if bub.invuln_ticks % 8 > 3
@@ -123,7 +127,7 @@ drawing =
     ctx.stroke()
 
     if bub.engines_last_used_at && _.now() - bub.engines_last_used_at < 200
-      radius = bub.engine_power_last_applied / BUB_INITIAL_ENGINE_POWER * 10
+      radius = bub.engine_power_last_applied / BUB_INITIAL_ENGINE_POWER * 8
       gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
       gradient.addColorStop(0, "rgba(255, 255, 0, 1)")
       gradient.addColorStop(0.5, "rgba(255, 0, 0, 1)")
@@ -134,8 +138,6 @@ drawing =
       ctx.closePath()
       ctx.fill()
     ctx.restore()
-
-
 
   draw_sob : (ctx, sob) ->
     return if sob.invuln_ticks % 8 > 3
@@ -169,12 +171,6 @@ drawing =
         ctx.lineTo(j.x * SCALE, j.y * SCALE)
         ctx.closePath()
         ctx.stroke()
-      # for guid, game_object of sob.nearby_game_objects
-      #   ctx.beginPath()
-      #   ctx.moveTo(sob.x * SCALE, sob.y * SCALE)
-      #   ctx.lineTo(game_object.x * SCALE, game_object.y * SCALE)
-      #   ctx.closePath()
-      #   ctx.stroke()
       ctx.restore()
 
 

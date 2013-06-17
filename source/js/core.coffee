@@ -48,7 +48,7 @@ PLACEMENT_OFFSET = 2
     @player_body.SetLinearDamping(1)
 
     @game_object_settings =
-      jerk_base_engine_power : 0.01
+      jerk_base_engine_power : JERK_INITIAL_ENGINE_POWER
       bub_base_engine_power : BUB_INITIAL_ENGINE_POWER
       jerk_charge_duration : JERK_CHARGE_DURATION_PIXEL_COEFF * @width * @height
 
@@ -77,11 +77,10 @@ PLACEMENT_OFFSET = 2
 
       for object_type_name, quantity of wave.spawns
         object_type = window[object_type_name.toUpperCase()]
-        quantity = Math.ceil(quantity * (@height * @width / (1280 * 800))) # normalize quantity by window size
+        #quantity = Math.ceil(quantity * (@height * @width / (1280 * 800))) # normalize quantity by window size
         _.log "creating #{quantity} of type #{object_type} : #{ENUM_NAME_BY_TYPE[object_type]}"
 
-
-        for i in [0..quantity]
+        while quantity--
           attempts = 1
           invuln_ticks = if @level_idx == 0 && wave_idx == 0 then 0 else 60
           x = @random_x_coord()
@@ -187,6 +186,7 @@ PLACEMENT_OFFSET = 2
     @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
   # wrap object to other side of screen if its not on screen
+  # returns true if it wrapped, false otherwise
   wrap_object : (body) ->
     pos = body.GetPosition()
     if pos.x > @world_width + EDGE_OFFSET
@@ -203,6 +203,10 @@ PLACEMENT_OFFSET = 2
       new_x = pos.x unless new_x?
       new_y = pos.y unless new_y?
       body.SetPosition(new b2Vec2(new_x, new_y))
+      true
+    else
+      false
+
 
   gas : (game_object, physics_body, do_backwards, pow = 0.04) ->
     angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
@@ -234,7 +238,8 @@ PLACEMENT_OFFSET = 2
       @player_body.ApplyTorque(0.2)
     if @keys.SPACE && @player.fire_juice > BASE_BULLET_COST
       @shoot_bullet(@player.bullet_radius)
-    # if @keys.SHIFT
+    if @keys.SHIFT && @keys.D
+      @toggle_debug()
     #   if @player.fire_juice > 0
     #     @shoot_bullet 0.20
 
@@ -279,11 +284,7 @@ PLACEMENT_OFFSET = 2
           graveyard.push(game_object)
           @world.DestroyBody(body)
         else
-          @wrap_object(body)
-          _.merge game_object,
-            x : pos.x
-            y : pos.y
-            angle : body.GetAngle()
+          did_wrap = @wrap_object(body)
 
           joint_aux = body.GetJointList()
 
@@ -294,15 +295,23 @@ PLACEMENT_OFFSET = 2
               game_object.joints.length = 0
             while joint_aux?
               joint = joint_aux.joint
-
-              #debugger
-              attached_pos = joint.GetBodyB().GetPosition()
-              game_object.joints.push
-                x : attached_pos.x
-                y : attached_pos.y
+              if did_wrap
+                @world.DestroyJoint(joint) #things get really strange otherwise
+              else
+                attached_pos = joint.GetBodyB().GetPosition()
+                game_object.joints.push
+                  x : attached_pos.x
+                  y : attached_pos.y
               joint_aux = joint_aux.next
           else if game_object.joints?
             delete game_object.joints
+
+
+          _.merge game_object,
+            x : pos.x
+            y : pos.y
+            angle : body.GetAngle()
+
 
           @ai[game_object.type]?(game_object, body)
       @enemies_remaining += 1 if POINTS_BY_TYPE[game_object.type]?
@@ -343,22 +352,35 @@ PLACEMENT_OFFSET = 2
   random_x_coord : () ->
     _.random(@width / 10 / SCALE, (@width - @width / 10) / SCALE)
 
-  random_y_coord : () ->
+  random_y_coord : ->
     _.random(@height / 10 / SCALE, (@height - @height / 10) / SCALE)
 
-  toggle_debug: () ->
-    if @debug?
-     @debug = !@debug
+  turn_on_debug: ->
+    @save()
+    @debug = true
+    @autoclear = false
+    debugDraw = new b2DebugDraw()
+    debugDraw.SetSprite(this)
+    debugDraw.SetDrawScale(SCALE)
+    debugDraw.SetFillAlpha(0.3)
+    debugDraw.SetLineThickness(1.0)
+    debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
+    @world.SetDebugDraw(debugDraw)
+
+  turn_off_debug: ->
+    @debug = false
+    @restore()
+
+    @autoclear = true
+    @world.SetDebugDraw(null)
+
+  toggle_debug: ->
+    return if @debug_last_toggled_at && _.now() - @debug_last_toggled_at < 200
+    if @debug
+      @turn_off_debug()
     else
-     @debug = true
-     @autoclear = false
-     debugDraw = new b2DebugDraw()
-     debugDraw.SetSprite(this)
-     debugDraw.SetDrawScale(SCALE)
-     debugDraw.SetFillAlpha(0.3)
-     debugDraw.SetLineThickness(1.0)
-     debugDraw.SetFlags(b2DebugDraw.e_shapeBit | b2DebugDraw.e_jointBit)
-     @world.SetDebugDraw(debugDraw)
+      @turn_on_debug()
+    @debug_last_toggled_at = _.now()
 
   draw_hp_bar : ->
     bar_w = 100

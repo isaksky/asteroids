@@ -40,6 +40,8 @@ class @Ai
     @use_engine(jerk, jerk_body, Math.max(0.07, @game_object_settings.jerk_base_engine_power * 3))
     if _.now() - jerk.current_charge_start > @game_object_settings.jerk_charge_duration
       jerk.current_charge_start = null
+    jerk.aim -= 0.3 if jerk.aim
+    jerk.aim = 0 if jerk.aim && jerk.aim < 0
   else if is_off_screen
     @use_engine(jerk, jerk_body, 0.07)
   else if Math.abs(angle_diff) < 0.05
@@ -48,7 +50,7 @@ class @Ai
       jerk.current_charge_start = _.now()
       _.log "ATTACK!"
   else
-    jerk.aim -= 0.1 if jerk.aim
+    jerk.aim -= 0.2 if jerk.aim
     jerk.aim = 0 if jerk.aim && jerk.aim < 0
     # look ahead 1/3 sec. Applying the right torque gets complicated when we're already spinning
     future_jerk_angle = jerk_angle + jerk_body.GetAngularVelocity() / 3.0
@@ -86,7 +88,7 @@ class @Ai
       body = fixture.GetBody()
       guid = body.GetUserData()
       game_object = @game_objects[guid]
-      if game_object.type == ASTEROID && !(sob.last_game_object_guid_released == guid && (_.now() - sob.last_released_at) < 500)
+      if game_object.type == ASTEROID && !(sob.last_game_object_guid_released == guid && (_.now() - sob.last_released_at) < 1000)
         sob.nearby_game_objects[guid] = game_object
         sob.nearby_game_object_bodies[guid] = body
         false
@@ -94,6 +96,9 @@ class @Ai
         true
     , aabb
 
+    @use_engine(sob, sob_body, 0.2)
+    #sob_body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), sob_body.GetWorldCenter())
+    #sob_body.ApplyImpulse(new b2Vec2(3,0), sob_body.GetWorldCenter())
     # the above thing is synchronous, so it is ok to do this:
     for guid, game_object of sob.nearby_game_objects
       body = sob.nearby_game_object_bodies[guid]
