@@ -1,3 +1,5 @@
+# TODO: clean up the repetition between the fns in this file
+
 # loljs imports
 b2Vec2 = Box2D.Common.Math.b2Vec2
 b2BodyDef = Box2D.Dynamics.b2BodyDef
