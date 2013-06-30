@@ -69,7 +69,13 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 
 @create_game_object[ASTEROID] = (x, y, invuln_ticks = 0, points = null) ->
   unless points?
-    points = util.random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+    while true
+      points = util.random_polygon_points(_.random(0.25, 1), _.random(5, 8))
+      if 0 == Box2DSeparator.validate(points) # not all random points will work
+        break
+      else
+        _.log "Validation failed!"
+
   asteroid = {points, x, y, invuln_ticks, hp: 30}
   asteroid.color = _.random(COLOR_PALETTE_2)
   calc_game_object_bounds(asteroid)

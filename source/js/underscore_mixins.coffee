@@ -102,3 +102,10 @@ _.mixin
 
   is_point_in_rect : (x, y, rect_x_min, rect_y_min, rect_x_max, rect_y_max) ->
     x >= rect_x_min && x <= rect_x_max && y >= rect_y_min && y <= rect_y_max
+
+  frequencies : (xs) ->
+    h = {}
+    for x in xs
+      h[x] ||= 0
+      h[x] += 1
+    h
