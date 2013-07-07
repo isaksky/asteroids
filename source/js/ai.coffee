@@ -16,8 +16,6 @@ b2RevoluteJoint = Box2D.Dynamics.Joints.b2RevoluteJoint
 b2DistanceJointDef = Box2D.Dynamics.Joints.b2DistanceJointDef
 b2DistanceJoint = Box2D.Dynamics.Joints.b2DistanceJoint
 
-
-
 class @Ai
   constructor : ({@world, @player, @player_body, @world_width, @world_height, @game_objects, @game_object_settings}) ->
 
@@ -28,6 +26,7 @@ class @Ai
      game_object.engine_power_last_applied = pow
 
 @Ai.prototype[JERK] = (jerk, jerk_body) ->
+  return if jerk.invuln_ticks
   dx =  @player.x - jerk.x
   dy = @player.y - jerk.y
   attack_angle = _.normalize_angle(Math.atan2(dy, dx))
@@ -60,6 +59,7 @@ class @Ai
 
 
 @Ai.prototype[BUB] = (bub, bub_body) ->
+  return if bub.invuln_ticks
   dx =  @player.x - bub.x
   dy = @player.y - bub.y
   attack_angle = _.normalize_angle(Math.atan2(dy, dx))
@@ -75,9 +75,10 @@ class @Ai
     torque = (if _.is_clockwise_of(attack_angle, future_bub_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
     bub_body.ApplyTorque(torque)
     #if Math.abs(angle_diff < 0.2)
-    @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power) unless bub.invuln_ticks
+    @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power)
 
 @Ai.prototype[SOB] = (sob, sob_body) ->
+  return if sob.invuln_ticks
   if !sob_body.GetJointList() #no asteroids yet?
     aabb = new b2AABB
     aabb.lowerBound.Set(sob.x - 1, sob.y - 1)
