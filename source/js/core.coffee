@@ -119,12 +119,11 @@ PLACEMENT_OFFSET = 2
     if guid_a && guid_b && @game_objects[guid_a] && @game_objects[guid_b]
       a = @game_objects[guid_a]
       b = @game_objects[guid_b]
+      info.a = a
+      info.b = b
       info.same_types = a.type == b.type
-      if info.same_types
-        info.both = [a, b]
-      else
-        info[a.type] = a
-        info[b.type] = b
+      info[a.type] = a
+      info[b.type] = b
     info
 
   start_collision_detection : ->
@@ -132,24 +131,20 @@ PLACEMENT_OFFSET = 2
     listener = new Box2D.Dynamics.b2ContactListener
     listener.PreSolve = (contact) =>
       contact_info = @contact_info(contact)
-      if contact_info.same_types && contact_info.both[0].type == BULLET
+      if contact_info.same_types && contact_info.a.type == BULLET
         contact.SetEnabled(false)
       else if contact_info[BULLET] && contact_info[PARTICLE]
         contact.SetEnabled(false)
-
       else if contact_info[SHIP] && contact_info[BULLET] &&
       contact_info[BULLET].source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
         contact.SetEnabled(false)
-      else if (contact_info[ASTEROID]?.invuln_ticks || contact_info[JERK]?.invuln_ticks) && contact_info[SHIP]?.is_player
-        contact.SetEnabled(false)       # player can't crash into invuln asteroid or jerk
       else if drop = _.clj_some(DROP_TYPES, (game_object_type) -> contact_info[game_object_type])
         contact.SetEnabled(false)
         if contact_info[SHIP]?.is_player
           drop.consume(contact_info[SHIP])
           drop.hp = 0
-
-        # else if a instanceof Particle && b instanceof Particle
-        #   contact.SetEnabled(false)
+      else if contact_info.a.invuln_ticks || contact_info.b.invuln_ticks
+        contact.SetEnabled(false)
 
     listener.PostSolve = (contact, impulse) =>
       force = Math.abs(impulse.normalImpulses[0]) * 8.5
@@ -159,12 +154,14 @@ PLACEMENT_OFFSET = 2
 
       #_.log "Collision between #{a.type} and #{b.type}"
 
+      enemy = (contact_info[JERK] || contact_info[BUB] || contact_info[SOB])
+
       if contact_info[ASTEROID] && contact_info[BULLET]
         contact_info[ASTEROID].hp -= force
         contact_info[BULLET].hp = 0
-      else if contact_info.same_types && contact_info.both[0].type == ASTEROID
-        contact_info.both[0].hp -= force
-        contact_info.both[1].hp -= force
+      else if contact_info.same_types && contact_info.a.type == ASTEROID
+        contact_info.a.hp -= force
+        contact_info.b.hp -= force
       else if contact_info[ASTEROID] && contact_info[SHIP]?.is_player
         if force > 0.25 # so player can push shit around a bit without getting hurt
           contact_info[ASTEROID].hp -= force
@@ -173,8 +170,8 @@ PLACEMENT_OFFSET = 2
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
-      else if contact_info[BULLET] && (contact_info[JERK] || contact_info[BUB] || contact_info[SOB])
-        (contact_info[JERK] || contact_info[BUB] || contact_info[SOB]).hp -= force
+      else if contact_info[BULLET] && enemy
+        enemy.hp -= force
         contact_info[BULLET].hp = 0
 
     @world.SetContactListener(listener)
