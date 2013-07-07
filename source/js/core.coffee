@@ -143,7 +143,8 @@ PLACEMENT_OFFSET = 2
         if contact_info[SHIP]?.is_player
           drop.consume(contact_info[SHIP])
           drop.hp = 0
-      else if contact_info.a.invuln_ticks || contact_info.b.invuln_ticks
+      else if (contact_info.a.invuln_ticks || contact_info.b.invuln_ticks) && contact_info[SHIP]?.is_player
+        # stuff that is invuln can collide, unless it involves the player
         contact.SetEnabled(false)
 
     listener.PostSolve = (contact, impulse) =>
