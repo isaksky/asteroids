@@ -103,8 +103,8 @@ PLACEMENT_OFFSET = 2
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
       JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.8)
-      @game_object_settings.jerk_base_engine_power *= 1.3
-      @game_object_settings.bub_base_engine_power *= 1.3
+      @game_object_settings.jerk_base_engine_power *= 1.15
+      @game_object_settings.bub_base_engine_power *= 1.15
       @level_idx += 1
       @prev_wave_spawned_by_level[@level_idx] = -1
       @level_start_time = _.now()
@@ -152,9 +152,6 @@ PLACEMENT_OFFSET = 2
       contact_info = @contact_info(contact)
 
       force *= 120 if contact_info[BULLET]
-
-      #_.log "Collision between #{a.type} and #{b.type}"
-
       enemy = (contact_info[JERK] || contact_info[BUB] || contact_info[SOB])
 
       if contact_info[ASTEROID] && contact_info[BULLET]
