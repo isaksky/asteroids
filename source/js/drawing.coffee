@@ -153,6 +153,7 @@ drawing =
 
     if bub.engines_last_used_at && _.now() - bub.engines_last_used_at < 200
       radius = bub.engine_power_last_applied / BUB_INITIAL_ENGINE_POWER * 8
+      radius = Math.min(radius, 26)
       gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
       gradient.addColorStop(0, "rgba(255, 255, 0, 1)")
       gradient.addColorStop(0.5, "rgba(255, 0, 0, 1)")
@@ -205,25 +206,12 @@ drawing =
     age = _.now() - bullet.start_time
     ctx.save()
     ctx.globalCompositeOperation = "lighter"
-    #ctx.globalAlpha = 0.6
     ctx.fillStyle = bullet.color
-
     x = bullet.x * SCALE
     y = bullet.y * SCALE
-
     ctx.beginPath()
-    if bullet.radius > SMALLEST_BULLET_RADIUS
-      inner_circle_size = SCALE * bullet.radius * 0.95
-      gradient_size = SCALE * bullet.radius * 2
-      gradient = ctx.createRadialGradient(x, y, 0, x, y, gradient_size)
-      gradient.addColorStop(inner_circle_size / gradient_size, "rgba(255,255,255, 1)")
-      gradient.addColorStop(1, bullet.color) #'#69D2E7'
-      ctx.fillStyle = gradient
-      ctx.arc(x, y, gradient_size, 0, TWO_PI, true)
-    else
-      ctx.arc(x, y, bullet.radius * SCALE, 0, TWO_PI, true)
-      ctx.fillStyle = bullet.color
-
+    ctx.arc(x, y, bullet.radius * SCALE, 0, TWO_PI, true)
+    ctx.fillStyle = bullet.color
     ctx.closePath()
     ctx.fill()
     ctx.restore()
@@ -233,8 +221,6 @@ drawing =
     age = _.now() - particle.start_time
     display_radius = SCALE * particle.radius * 5 # * (1 - age / MAX_PARTICLE_AGE)
     ctx.save()
-    #ctx.rotate(dToR(circle.rotation+185))
-    #ctx.scale(1,1)
     ctx.beginPath()
     x = particle.x * SCALE
     y = particle.y * SCALE

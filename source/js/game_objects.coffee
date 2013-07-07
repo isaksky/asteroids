@@ -64,7 +64,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   bullet.hp = 1
   bullet.mass = radius
   bullet.start_time = _.now()
-  bullet.color = if radius > SMALLEST_BULLET_RADIUS then _.random(COLOR_PALLETE_1) else _.random(COLOR_PALETTE_2)
+  bullet.color = _.random(COLOR_PALETTE_2)
   bullet
 
 @create_game_object[ASTEROID] = (x, y, invuln_ticks = 0, points = null) ->
