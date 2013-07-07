@@ -339,7 +339,8 @@ PLACEMENT_OFFSET = 2
     on_last_level = @level_idx == levels.length - 1
     on_last_wave = @prev_wave_spawned_by_level[@level_idx] == levels[@level_idx].waves.length - 1
     if !on_last_wave
-      wave_due_at = @wave_start_time + levels[@level_idx].waves[@prev_wave_spawned_by_level[@level_idx]].start_time
+      next_wave_idx = @prev_wave_spawned_by_level[@level_idx] + 1
+      wave_due_at = @wave_start_time + levels[@level_idx].waves[next_wave_idx].start_time
       due_for_wave = _.now() > wave_due_at
 
     if on_last_level && on_last_wave
