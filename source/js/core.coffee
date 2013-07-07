@@ -18,6 +18,7 @@ b2DistanceJoint = Box2D.Dynamics.Joints.b2DistanceJoint
 import_asteroids_globals(@)
 
 LEVEL_INTRO_TIME = 2500
+LIVES_LEFT_DISPLAY_TIME = 1500
 MAX_PLACEMENT_ATTEMPTS = 50
 PLACEMENT_OFFSET = 2
 
@@ -42,6 +43,7 @@ PLACEMENT_OFFSET = 2
     @player = create_game_object[SHIP](@world_width / 2, @world_height / 2)
     @player.is_player = true
     @game_objects[@player.guid] = @player
+    @lives_remaining = 3
 
     @player_body = physics_helper.get_physics_setup_fn(@player)(@player, @world)
     @player_body.SetAngularDamping(2.5)
@@ -236,7 +238,7 @@ PLACEMENT_OFFSET = 2
       @player_body.ApplyTorque(-0.2)
     if @keys.RIGHT
       @player_body.ApplyTorque(0.2)
-    if @keys.SPACE && @player.fire_juice > BASE_BULLET_COST
+    if @keys.SPACE && @player.fire_juice > BASE_BULLET_COST && !@player.invuln_ticks
       @shoot_bullet(@player.bullet_radius)
     if @keys.SHIFT && @keys.D
       @toggle_debug()
@@ -265,7 +267,13 @@ PLACEMENT_OFFSET = 2
         game_object = @game_objects[body.GetUserData()]
         if game_object.hp <= 0
           if game_object.is_player
-            @finished = true
+            @player_last_died_at = _.now()
+            @lives_remaining -= 1
+            if @lives_remaining == 0
+              @finished = true
+            else
+              @player.invuln_ticks = 500
+              @player.hp = @player.max_hp
           else
             graveyard.push(game_object)
             @world.DestroyBody(body)
@@ -401,6 +409,17 @@ PLACEMENT_OFFSET = 2
     @fillStyle = "#63D1F4"
     @fillRect(10, 20, (@player.fire_juice / MAX_PLAYER_FIRE_JUICE) * bar_w,  bar_h)
 
+  draw_lives_remaining : ->
+    if @player_last_died_at
+      died_ago = _.now() - @player_last_died_at
+      if died_ago < LIVES_LEFT_DISPLAY_TIME && @lives_remaining > 0
+        @textAlign = "center"
+        @font = "50px monospace"
+        eased_alpha = Math.sin(died_ago / LIVES_LEFT_DISPLAY_TIME * Math.PI)
+        @strokeStyle = "rgba(99, 209, 244, #{eased_alpha})"
+
+        @strokeText("#{@lives_remaining} #{if @lives_remaining > 1 then 'lives' else 'life' } remaining", @width / 2, @height / 2 - 100)
+
   draw_score : () ->
     @textAlign = "right"
     @font = "30px monospace"
@@ -424,6 +443,7 @@ PLACEMENT_OFFSET = 2
 
     @draw_hp_bar()
     @draw_fire_juice_bar()
+    @draw_lives_remaining()
     @draw_score()
     @draw_level_intro()
 
