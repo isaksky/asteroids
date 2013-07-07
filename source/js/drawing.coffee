@@ -29,6 +29,7 @@ drawing =
     ctx.restore()
 
   draw_ship : (ctx, player) ->
+    #return if
     inner_circle_size = 0
     gradient_size = 0.5 * SCALE
     x = player.x * SCALE + (player.max_x / 3 * SCALE) * Math.cos(player.angle)
@@ -44,7 +45,26 @@ drawing =
     ctx.fillStyle = gradient
     ctx.closePath()
     ctx.fill()
+
+    if player.invuln_ticks
+      # flicker when it is about to run out
+      if player.invuln_ticks > 100 || !(player.invuln_ticks % 8 > 3)
+        # draw shield around player
+        ctx.beginPath()
+        shield_size = player.max_x * SCALE * 1.1
+        ctx.arc(x, y, shield_size, 0, TWO_PI, true)
+        gradient = ctx.createRadialGradient(x, y, 0, x, y, shield_size)
+        gradient.addColorStop(0, "rgba(255,255,255, 0)")
+        gradient.addColorStop(0.2, "rgba(255,255,255, 0)")
+        #gradient.addColorStop(0.8, "rgba(255,255,255, 0)")
+        gradient.addColorStop(0.9, "rgba(100,255,100, 1)")
+        gradient.addColorStop(1, "rgba(255,255,255,0)")
+        #gradient.addColorStop(1, "rgba(202,112,220,0)")
+        ctx.fillStyle = gradient
+        ctx.closePath()
+        ctx.fill()
     ctx.restore()
+
 
     ctx.save()
     ctx.globalCompositeOperation = "lighter"
@@ -61,7 +81,12 @@ drawing =
       ctx[f]((point.x + player.x) * SCALE, (point.y + player.y) * SCALE)
     ctx.closePath()
     ctx.stroke()
+
+
+
     ctx.restore()
+
+
 
   draw_jerk : (ctx, jerk) ->
     return if jerk.invuln_ticks % 8 > 3
