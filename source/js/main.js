@@ -1,3 +1,4 @@
+//= require rolling_statistics
 //= require underscore_mixins
 //= require globals
 //= require util

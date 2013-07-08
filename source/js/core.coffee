@@ -29,6 +29,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
   # Gotta turn things way down for people not using Chrome
   max_pixels :  if "Google Inc." == window.navigator?.vendor then 1280 * 800 else 800 * 600
   setup : ->
+    @fps_stats = new RollingStatistics
     @waves_spawned_by_level = {}
     @score = @num_update_ticks = 0
     @finished = false
@@ -49,6 +50,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @player_body = physics_helper.get_physics_setup_fn(@player)(@player, @world)
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
+
 
     @game_object_settings =
       jerk_base_engine_power : JERK_INITIAL_ENGINE_POWER
@@ -238,8 +240,14 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       @shoot_bullet(@player.bullet_radius)
     if @keys.SHIFT && @keys.D
       @toggle_debug()
-    #   if @player.fire_juice > 0
-    #     @shoot_bullet 0.20
+    if @keys.SHIFT && @keys.F
+      @toggle_show_fps()
+
+
+  toggle_show_fps: ->
+    return if @toggle_fps_last_toggled_at && _.now() - @toggle_fps_last_toggled_at < 200
+    @show_fps = !@show_fps
+    @toggle_fps_last_toggled_at = _.now()
 
   step_world : ->
     return unless @dt > 0
@@ -347,6 +355,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @prev_update_millis = @millis
 
     @advance_level_check() if @num_update_ticks % 20 == 1
+    @fps_stats.push(@dt) if @dt > 0
 
     #@spawn_enemies_tick() if @num_update_ticks % 20 == 1
     @num_update_ticks += 1
@@ -434,6 +443,13 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @strokeStyle = "#63D1F4"
     @strokeText("#{@score}", @width - 5, 30)
 
+  draw_fps : () ->
+    @textAlign = "right"
+    @font = "10px monospace"
+    @strokeStyle = "#63D1F4"
+    fps = Math.floor(1000 / @fps_stats.mean())
+    @fillText("#{fps} fps", @width - 5, @height - 10)
+
   draw_level_intro : () ->
     d = _.now() - @level_start_time
     if d <= LEVEL_INTRO_TIME
@@ -454,6 +470,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @draw_lives_remaining()
     @draw_score()
     @draw_level_intro()
+    @draw_fps() if @show_fps
 
     if @finished
       @textAlign = "center"
