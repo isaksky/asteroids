@@ -21,6 +21,7 @@ LEVEL_INTRO_TIME = 2500
 LIVES_LEFT_DISPLAY_TIME = 1500
 MAX_PLACEMENT_ATTEMPTS = 50
 PLACEMENT_OFFSET = 2
+STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
 
 
 @game = Sketch.create
@@ -240,6 +241,20 @@ PLACEMENT_OFFSET = 2
     #   if @player.fire_juice > 0
     #     @shoot_bullet 0.20
 
+  step_world : ->
+    return unless @dt > 0
+    step_needed = @dt / 1000
+    step_needed += @step_needed_remainder if @step_needed_remainder
+    #debugger
+    num_steps = Math.floor(step_needed / STEP_RATE)
+    for i in [0..num_steps]
+      @world.Step(STEP_RATE, 10, 10)
+      @world.ClearForces()
+      step_needed -= STEP_RATE
+
+    @step_needed_remainder = if step_needed > 0 then step_needed else 0
+
+
   update : ->
     return if @finished
     @player.fire_juice += 0.5
@@ -247,11 +262,9 @@ PLACEMENT_OFFSET = 2
 
     @handle_keyboard_input()
 
-    #bottom
-    #step_rate = @dt / 1000
-    @world.Step(1 / 60, 10, 10)
+    @step_world()
     @world.DrawDebugData() if @debug
-    @world.ClearForces()
+
 
     graveyard = []
     body = @world.GetBodyList()
