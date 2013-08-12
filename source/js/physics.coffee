@@ -96,6 +96,16 @@ setup_physics_fns_by_type[BULLET] = (bullet, world, player_body, player) ->
     )
   body.SetLinearVelocity(bullet_vel)
 
+setup_physics_fns_by_type[ORB] = (orb, world, player_body, player) ->
+  body = setup_circular_physics_body(orb, world, 0.2)
+  player_vel = player_body.GetLinearVelocity()
+  orb_vel = new b2Vec2(
+      player_vel.x + Math.cos(player.angle) * BASE_ORB_SPEED
+      player_vel.y + Math.sin(player.angle) * BASE_ORB_SPEED
+    )
+  body.SetLinearVelocity(orb_vel)
+  body.ApplyTorque(0.2)
+
 setup_physics_fns_by_type[PARTICLE] = (particle, world) ->
   body = setup_circular_physics_body(particle, world, 0.5)
   body

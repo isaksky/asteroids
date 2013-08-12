@@ -288,5 +288,37 @@ drawing =
     powerup.pulse_tick += 1
     powerup.pulse_tick %= POWERUP_PULSE_TICKS
 
+  draw_orb : (ctx, o) ->
+    display_radius = SCALE * o.radius
+    ctx.save()
+    ctx.beginPath()
+    x = o.x * SCALE
+    y = o.y * SCALE
+    ctx.arc(x, y, display_radius, 0, TWO_PI, true)
+    ctx.closePath()
+    ctx.fillStyle = "rgba(27, 128, 224, 0.9)"
+    ctx.fill()
+    ctx.restore()
+
+  draw_shard : (ctx, o) ->
+    return if o.invuln_ticks % 8 > 3
+    x = o.x * SCALE
+    y = o.y * SCALE
+
+    ctx.save()
+    ctx.globalCompositeOperation = "lighter"
+    ctx.translate(x, y)
+    ctx.rotate(o.angle)
+    ctx.translate(-x, -y)
+    ctx.fillStyle = "rgba(27, 128, 224, 0.9)"
+    ctx.lineWidth = MIN_LINE_WIDTH + o.hp * 2 / o.max_hp
+    ctx.beginPath()
+    for point, i in o.points
+      f = if i == 0 then 'moveTo' else 'lineTo'
+      ctx[f]((point.x + o.x) * SCALE, (point.y + o.y) * SCALE)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+
 # loljs export
 @drawing = drawing

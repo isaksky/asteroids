@@ -51,7 +51,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @player_body.SetAngularDamping(2.5)
     @player_body.SetLinearDamping(1)
 
-
     @game_object_settings =
       jerk_base_engine_power : JERK_INITIAL_ENGINE_POWER
       bub_base_engine_power : BUB_INITIAL_ENGINE_POWER
@@ -75,7 +74,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         wave_found = true
         break
 
-    if wave_found
+    if wave_found && false
       _.log "Sending next wave!"
       @prev_wave_spawned_by_level[@level_idx] = wave_idx
       @wave_start_time = _.now()
@@ -185,6 +184,18 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     physics_helper.get_physics_setup_fn(bullet)(bullet, @world, @player_body, @player)
     @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
+  shoot_orb : ->
+    if @player.fire_juice > BASE_ORB_COST && !@player.invuln_ticks && (!@player.orb_last_fired_at? || _.now() - @player.orb_last_fired_at > 500)
+      _.log("Shooting orb!")
+      radius = 0.3
+      x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
+      y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
+      orb = create_game_object[ORB](radius, x, y, @player.guid)
+      @game_objects[orb.guid] = orb
+      physics_helper.get_physics_setup_fn(orb)(orb, @world, @player_body, @player)
+      @player.fire_juice = Math.max(@player.fire_juice - BASE_ORB_COST, 0)
+      @player.orb_last_fired_at = _.now()
+
   # wrap object to other side of screen if its not on screen
   # returns true if it wrapped, false otherwise
   wrap_object : (body) ->
@@ -206,7 +217,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       true
     else
       false
-
 
   gas : (game_object, physics_body, do_backwards, pow = 0.04) ->
     angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
@@ -238,11 +248,12 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       @player_body.ApplyTorque(0.2)
     if @keys.SPACE && @player.fire_juice > BASE_BULLET_COST && !@player.invuln_ticks
       @shoot_bullet(@player.bullet_radius)
+    if @keys.SHIFT && @keys.G
+      @shoot_orb()
     if @keys.SHIFT && @keys.D
       @toggle_debug()
     if @keys.SHIFT && @keys.F
       @toggle_show_fps()
-
 
   toggle_show_fps: ->
     return if @toggle_fps_last_toggled_at && _.now() - @toggle_fps_last_toggled_at < 200
@@ -262,7 +273,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
 
     @step_needed_remainder = if step_needed > 0 then step_needed else 0
 
-
   update : ->
     return if @finished
     @player.fire_juice += 0.5
@@ -273,7 +283,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @step_world()
     @world.DrawDebugData() if @debug
 
-
     graveyard = []
     body = @world.GetBodyList()
     @enemies_remaining = 0
@@ -281,6 +290,8 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       if body.GetUserData()?
         pos = body.GetPosition()
         game_object = @game_objects[body.GetUserData()]
+        if SHARD == game_object.type && _.now() - game_object.start_time > 1000
+          game_object.hp = 0
         if game_object.hp <= 0
           if game_object.is_player
             @player_last_died_at = _.now()
@@ -330,12 +341,10 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
           else if game_object.joints?
             delete game_object.joints
 
-
           _.merge game_object,
             x : pos.x
             y : pos.y
             angle : body.GetAngle()
-
 
           @ai[game_object.type]?(game_object, body)
       @enemies_remaining += 1 if POINTS_BY_TYPE[game_object.type]?

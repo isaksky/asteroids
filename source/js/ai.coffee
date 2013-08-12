@@ -142,3 +142,25 @@ class @Ai
         @world.DestroyJoint(joint)
         sob.last_released_at = _.now()
         sob.last_game_object_guid_released = attached_body.GetUserData()
+
+@Ai.prototype[ORB] = (orb, orb_body) ->
+  if _.now() - orb.start_time > 500
+    orb.hp = 0
+    angle_step = Math.PI * 2 / orb.num_shards
+    for i in [0...orb.num_shards]
+      angle_offset = angle_step * i
+      shard_angle = angle_offset + orb.angle
+      _.log "Create shard #{i}"
+      offset = 0.05 + orb.radius
+      x = orb.x + offset * Math.cos(shard_angle)
+      y = orb.y + offset * Math.sin(shard_angle)
+      shard = create_game_object[SHARD](x, y, orb.guid)
+      shard.angle = shard_angle
+      shard_body = physics_helper.get_physics_setup_fn(shard)(shard, @world, false)
+      @game_objects[shard.guid] = shard
+
+      shard_body.SetLinearVelocity(orb_body.GetLinearVelocity())
+      pow = 0.12
+      #shard_body.SetAngularVelocity(orb_body.GetAngularVelocity() / 10)
+      shard_body.ApplyImpulse(new b2Vec2(Math.cos(shard_angle) * pow,
+        Math.sin(shard_angle) * pow), shard_body.GetWorldCenter())

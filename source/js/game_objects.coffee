@@ -122,6 +122,24 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
     ship.bullet_radius *= 1.02
   powerup
 
+@create_game_object[ORB] = (radius, x, y, source_object_guid) ->
+  o = {x, y, radius: 0.2, hp : 1}
+  o.source_object_guid = source_object_guid
+  o.hp = 1
+  o.mass = radius
+  o.start_time = _.now()
+  o.num_shards = 9
+  o.angle = 0
+  o
+
+@create_game_object[SHARD] = (x, y, source_object_guid) ->
+  o = {x, y, hp : 1, angle: 0}
+  o.source_object_guid = source_object_guid
+  o.start_time = _.now()
+  o.points = [{x:0.3, y: 0}, {x : 0, y : 0.1}, {x : 0, y: -0.1}]
+  o.angle = 0
+  o
+
 # Add the type field to all the game objects
 for object_type, creation_fn of @create_game_object
   @create_game_object[object_type] = do (object_type) ->
