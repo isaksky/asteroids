@@ -52,7 +52,6 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 @create_game_object[SHIP] = (x,y) ->
   ship = {x, y, angle: 0, hp: 25, max_hp: 25, fire_juice: 0, bullet_radius: 0.05}
   ship.points = reflect_finish([{x: 0.75, y: 0}, {x: 0.2, y: 0.1}, {x: 0, y: 0.3}])
-  calc_game_object_bounds(ship)
   ship
 
 @create_game_object[BULLET] = (radius, x, y, source_object_guid) ->
@@ -78,7 +77,6 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
 
   asteroid = {points, x, y, invuln_ticks, hp: 30}
   asteroid.color = _.random(COLOR_PALETTE_2)
-  calc_game_object_bounds(asteroid)
   asteroid
 
 @create_game_object[JERK] = (x, y, invuln_ticks = 0) ->
@@ -92,7 +90,6 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
     {x: 0, y:-0.3}
     {x: 0.6, y: -0.2}
     ]
-  calc_game_object_bounds(jerk)
   jerk
 
 @create_game_object[BUB] = (x, y, invuln_ticks = 30) ->
@@ -100,7 +97,6 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   bub.color = '#24913C'
   bub.hp = bub.max_hp = 15
   bub.points = reflect_finish([{x: 0.475, y: 0}, {x: 0.375, y: 0.1}, {x : 0.15, y : 0.1}, {x: 0, y: 0.2}]) #reflect_finish([{x: 0.75, y: 0}, {x: 0.6, y: 0.2}, {x: 0, y: 0.3}])
-  calc_game_object_bounds(bub)
   bub
 
 @create_game_object[SOB] = (x, y, invuln_ticks = 0) ->
@@ -108,11 +104,10 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   sob.color = '#FFBC00'
   sob.hp = sob.max_hp = 350
   sob.points = _.revolve_points_in_quadrant([{x:0.65, y: 0}, {x : 0.17, y : 0.17}, {x : 0, y: 0.65}])
-  calc_game_object_bounds(sob)
   sob
 
 @create_game_object[HEALTH_PACK] = (x, y, amt = 8) ->
-  powerup = {x, y, hp:1}
+  powerup = {x, y, hp : 1}
   powerup.radius = 0.2
   powerup.color = "#cd5c5c"
   powerup.consume = (ship) ->
@@ -120,7 +115,7 @@ COLOR_PALETTE_2 = [ '#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4
   powerup
 
 @create_game_object[BULLET_RADIUS_POWERUP] = (x, y) ->
-  powerup = {x, y, hp:1}
+  powerup = {x, y, hp : 1}
   powerup.radius = 0.2
   powerup.color = "#0033ff"
   powerup.consume = (ship) ->
@@ -133,5 +128,7 @@ for object_type, creation_fn of @create_game_object
     _.compose (game_object) ->
       game_object.type = parseInt(object_type, 10) # because the key will have gotten coerced to a string, which we dont want
       game_object.guid = get_guid()
+      if game_object.points
+        calc_game_object_bounds(game_object)
       game_object
     , creation_fn

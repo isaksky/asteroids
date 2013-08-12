@@ -5,7 +5,6 @@ class @RollingStatistics
     @n = 0 #number of items
 
   push : (v) ->
-    console.assert(_.isNumber(v))
     @ary[@i] = v
     @i = (@i + 1) % @max
     @n += 1 if @n < @max
