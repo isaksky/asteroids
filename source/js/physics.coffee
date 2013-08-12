@@ -32,8 +32,15 @@ setup_physics_for_polygon = (game_object, world, seperate, density = 1.0) ->
   body_def.position.y = game_object.y
   body_def.userData = game_object.guid
   body = world.CreateBody(body_def) #.CreateFixture(fix_def).GetBody()
+
   if seperate
     Box2DSeparator.separate(body, fix_def, shape_pts, SCALE)
+  else
+    body.CreateFixture(fix_def)
+
+  if game_object.angle
+    body.SetAngle(game_object.angle)
+
   body
 
 setup_circular_physics_body = (game_object, world, density = 1.0) ->
@@ -58,13 +65,13 @@ setup_physics_fns_by_type[SHIP] = (ship, world) ->
   body
 
 setup_physics_fns_by_type[JERK] = (jerk, world) ->
-  body = setup_physics_for_polygon(jerk, world, true)
+  body = setup_physics_for_polygon(jerk, world, false)
   body.SetAngularDamping(4.5)
   body.SetLinearDamping(1.5)
   body
 
 setup_physics_fns_by_type[BUB] = (bub, world) ->
-  body = setup_physics_for_polygon(bub, world, true)
+  body = setup_physics_for_polygon(bub, world, false)
   body.SetAngularDamping(4.5)
   body.SetLinearDamping(1.5)
   body
