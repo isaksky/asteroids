@@ -139,7 +139,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       else if contact_info.projectile_type && contact_info[PARTICLE]
         contact.SetEnabled(false)
       else if contact_info[SHIP] && contact_info.projectile_type?.source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
-        _.log "Disable it pre!"
         contact.SetEnabled(false)
       else if drop = _.clj_some(DROP_TYPES, (game_object_type) -> contact_info[game_object_type])
         contact.SetEnabled(false)
@@ -168,7 +167,6 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
           contact_info[ASTEROID].hp -= force
           contact_info[SHIP].hp -= force
       else if contact_info[SHIP] && contact_info.projectile_type?.source_object_guid != contact_info[SHIP].guid
-        _.log "#{contact_info[SHIP].guid} == #{contact_info.projectile_type?.guid}"
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
@@ -187,8 +185,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @player.fire_juice = Math.max(@player.fire_juice - BASE_BULLET_COST, 0)
 
   shoot_orb : ->
-    if @player.fire_juice > BASE_ORB_COST && !@player.invuln_ticks && (!@player.orb_last_fired_at? || _.now() - @player.orb_last_fired_at > 500)
-      _.log("Shooting orb!")
+    if @player.fire_juice > BASE_ORB_COST && !@player.invuln_ticks && (!@player.orb_last_fired_at? || _.now() - @player.orb_last_fired_at > 125)
       radius = 0.3
       x = @player.x + (@player.max_x + radius) * Math.cos(@player.angle)
       y = @player.y + (@player.max_x + radius) * Math.sin(@player.angle)
