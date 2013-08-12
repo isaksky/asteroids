@@ -44,6 +44,7 @@ g.DROP_PCT_BY_TYPE[g.BUB] = 0.10
 g.DROP_PCT_BY_TYPE[g.SOB] = 0.25
 
 g.DROP_TYPES = [g.HEALTH_PACK, g.BULLET_RADIUS_POWERUP]
+g.PROJECTILE_TYPES = [g.BULLET, g.SHARD]
 
 # How much space is there beyond the edge of the screen?
 # We dont want objects to just wrap before they have completely dissapeared

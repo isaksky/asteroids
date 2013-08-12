@@ -74,7 +74,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         wave_found = true
         break
 
-    if wave_found && false
+    if wave_found
       _.log "Sending next wave!"
       @prev_wave_spawned_by_level[@level_idx] = wave_idx
       @wave_start_time = _.now()
@@ -123,6 +123,8 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       b = @game_objects[guid_b]
       info.a = a
       info.b = b
+      info.projectile_type = _.clj_some [a,b], (game_object) ->
+        game_object.type in PROJECTILE_TYPES
       info.same_types = a.type == b.type
       info[a.type] = a
       info[b.type] = b
@@ -133,12 +135,11 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     listener = new Box2D.Dynamics.b2ContactListener
     listener.PreSolve = (contact) =>
       contact_info = @contact_info(contact)
-      if contact_info.same_types && contact_info.a.type == BULLET
+      if contact_info.same_types && contact_info.projectile_type
         contact.SetEnabled(false)
-      else if contact_info[BULLET] && contact_info[PARTICLE]
+      else if contact_info.projectile_type && contact_info[PARTICLE]
         contact.SetEnabled(false)
-      else if contact_info[SHIP] && contact_info[BULLET] &&
-      contact_info[BULLET].source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
+      else if contact_info[SHIP] && contact_info.projectile_type?.source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
         contact.SetEnabled(false)
       else if drop = _.clj_some(DROP_TYPES, (game_object_type) -> contact_info[game_object_type])
         contact.SetEnabled(false)
@@ -153,12 +154,12 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       force = Math.abs(impulse.normalImpulses[0]) * 8.5
       contact_info = @contact_info(contact)
 
-      force *= 120 if contact_info[BULLET]
+      force *= 120 if contact_info.projectile_type
       enemy = (contact_info[JERK] || contact_info[BUB] || contact_info[SOB])
 
-      if contact_info[ASTEROID] && contact_info[BULLET]
+      if contact_info[ASTEROID] && contact_info.projectile_type
         contact_info[ASTEROID].hp -= force
-        contact_info[BULLET].hp = 0
+        contact_info.projectile_type.hp = 0
       else if contact_info.same_types && contact_info.a.type == ASTEROID
         contact_info.a.hp -= force
         contact_info.b.hp -= force
@@ -166,13 +167,13 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         if force > 0.25 # so player can push shit around a bit without getting hurt
           contact_info[ASTEROID].hp -= force
           contact_info[SHIP].hp -= force
-      else if contact_info[SHIP]?.is_player && (contact_info[BULLET]?.source_object_guid != contact_info[SHIP].guid)
+      else if contact_info[SHIP]?.is_player && (contact_info.projectile_type?.source_object_guid != contact_info[SHIP].guid)
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
-      else if contact_info[BULLET] && enemy
+      else if contact_info.projectile_type && enemy
         enemy.hp -= force
-        contact_info[BULLET].hp = 0
+        contact_info.projectile_type.hp = 0
 
     @world.SetContactListener(listener)
 
