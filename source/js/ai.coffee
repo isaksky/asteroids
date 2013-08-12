@@ -150,11 +150,10 @@ class @Ai
     for i in [0...orb.num_shards]
       angle_offset = angle_step * i
       shard_angle = angle_offset + orb.angle
-      _.log "Create shard #{i}"
       offset = 0.05 + orb.radius
       x = orb.x + offset * Math.cos(shard_angle)
       y = orb.y + offset * Math.sin(shard_angle)
-      shard = create_game_object[SHARD](x, y, orb.guid)
+      shard = create_game_object[SHARD](x, y, orb.source_object_guid)
       shard.angle = shard_angle
       shard_body = physics_helper.get_physics_setup_fn(shard)(shard, @world, false)
       @game_objects[shard.guid] = shard

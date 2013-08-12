@@ -123,11 +123,10 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       b = @game_objects[guid_b]
       info.a = a
       info.b = b
-      info.projectile_type = _.clj_some [a,b], (game_object) ->
-        game_object.type in PROJECTILE_TYPES
       info.same_types = a.type == b.type
       info[a.type] = a
       info[b.type] = b
+      info.projectile_type = _.clj_some PROJECTILE_TYPES, (type) -> info[type]
     info
 
   start_collision_detection : ->
@@ -140,6 +139,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       else if contact_info.projectile_type && contact_info[PARTICLE]
         contact.SetEnabled(false)
       else if contact_info[SHIP] && contact_info.projectile_type?.source_object_guid == contact_info[SHIP].guid       # ignore contacts between ship and ship's own bullets
+        _.log "Disable it pre!"
         contact.SetEnabled(false)
       else if drop = _.clj_some(DROP_TYPES, (game_object_type) -> contact_info[game_object_type])
         contact.SetEnabled(false)
@@ -167,7 +167,8 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         if force > 0.25 # so player can push shit around a bit without getting hurt
           contact_info[ASTEROID].hp -= force
           contact_info[SHIP].hp -= force
-      else if contact_info[SHIP]?.is_player && (contact_info.projectile_type?.source_object_guid != contact_info[SHIP].guid)
+      else if contact_info[SHIP] && contact_info.projectile_type?.source_object_guid != contact_info[SHIP].guid
+        _.log "#{contact_info[SHIP].guid} == #{contact_info.projectile_type?.guid}"
         contact_info[SHIP].hp -= force
       else if contact_info[JERK] && contact_info[SHIP]?.is_player
         contact_info[SHIP]?.hp -= force
