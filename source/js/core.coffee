@@ -148,6 +148,8 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       else if (contact_info.a.invuln_ticks || contact_info.b.invuln_ticks) && contact_info[SHIP]?.is_player
         # stuff that is invuln can collide, unless it involves the player
         contact.SetEnabled(false)
+      else if contact_info[ORB]
+        contact.SetEnabled(false)
 
     listener.PostSolve = (contact, impulse) =>
       force = Math.abs(impulse.normalImpulses[0]) * 8.5
