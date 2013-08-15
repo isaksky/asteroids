@@ -222,7 +222,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     else
       false
 
-  gas : (game_object, physics_body, do_backwards, pow = 0.04) ->
+  gas : (game_object, physics_body, do_backwards, pow = BASE_SHIP_ENGINE_POWER) ->
     angle = if do_backwards then (game_object.angle + PI) % TWO_PI else game_object.angle
     physics_body.ApplyImpulse(new b2Vec2(Math.cos(angle) * pow,
       Math.sin(angle) * pow), physics_body.GetWorldCenter())
@@ -242,9 +242,9 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         Math.sin(particle_angle) * pow), physics_body.GetWorldCenter())
 
   handle_keyboard_input : ->
-    if @keys.UP
+    if @keys.UP || @keys.W
       @gas(@player, @player_body, false)
-    if @keys.DOWN
+    if @keys.DOWN || @keys.S
       @gas(@player, @player_body, true)
     if @keys.LEFT
       @player_body.ApplyTorque(-0.2)
@@ -258,6 +258,14 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
       @toggle_debug()
     if @keys.SHIFT && @keys.F
       @toggle_show_fps()
+    if @keys.A
+      @player_body.ApplyImpulse(
+        new b2Vec2(Math.cos(@player_body.GetAngle() - HALF_PI) * BASE_SHIP_ENGINE_POWER, Math.sin(@player_body.GetAngle() - HALF_PI) * BASE_SHIP_ENGINE_POWER),
+        @player_body.GetWorldCenter())
+    if @keys.D
+      @player_body.ApplyImpulse(
+        new b2Vec2(Math.cos(@player_body.GetAngle() + HALF_PI) * BASE_SHIP_ENGINE_POWER, Math.sin(@player_body.GetAngle() + HALF_PI) * BASE_SHIP_ENGINE_POWER),
+        @player_body.GetWorldCenter())
 
   toggle_show_fps: ->
     return if @toggle_fps_last_toggled_at && _.now() - @toggle_fps_last_toggled_at < 200
