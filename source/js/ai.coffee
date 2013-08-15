@@ -93,7 +93,6 @@ class @Ai
     future_bub_angle = bub_angle + bub_body.GetAngularVelocity() / 3.0
     torque = (if _.is_clockwise_of(attack_angle, future_bub_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
     bub_body.ApplyTorque(torque)
-    #if Math.abs(angle_diff < 0.2)
     @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power)
 
 @Ai.prototype[SOB] = (sob, sob_body) ->
@@ -126,26 +125,15 @@ class @Ai
       y_force = 0.075 * (player_dy / dist)
       sob_body.ApplyImpulse(new b2Vec2(x_force, y_force), sob_body.GetWorldCenter())
       if dist < 3
-        sob_body.ApplyTorque(4)
-
-    #
+        sob_body.ApplyTorque(4) # dat chainsaw
 
     # the above thing is synchronous, so it is ok to do this:
     for guid, game_object of sob.nearby_game_objects
       body = sob.nearby_game_object_bodies[guid]
       unless body.GetJointList() # other object already attached to something?
-        #joint_def = new b2DistanceJointDef
         joint_def = new b2RevoluteJointDef
         v = sob_body.GetPosition()
-        #v = sob_body.GetLocalPoint(new b2Vec2(0.65,0.65))
-        #v = new b2Vec2(0.65,0.65)
         joint_def.Initialize(sob_body, body, v)
-        # joint_def.bodyA = sob_body
-        # joint_def.bodyB = body
-        # joint_def.localAnchorA = new b2Vec2(0,0 )#sob_body.GetLocalCenter()
-        # joint_def.localAnchorB = new b2Vec2(0,0) #body.GetLocalCenter()
-        #joint_def.anchorPoint = sob_body.GetLocalCenter()
-        #joint_def.length = 1.5
         joint_def.collideConnected = true
         joint_def.lowerAngle = 0.1
         joint_def.upperAngle = 0.3
