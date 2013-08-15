@@ -25,6 +25,25 @@ class @Ai
      game_object.engines_last_used_at = _.now()
      game_object.engine_power_last_applied = pow
 
+  angle_diff_from_player_body : (physics_body) ->
+    dx =  @player.x - physics_body.GetPosition().x
+    dy = @player.y - physics_body.GetPosition().y
+    attack_angle = _.normalize_angle(Math.atan2(dy, dx))
+    angle_diff = _.normalize_angle(physics_body.GetAngle() - attack_angle)
+
+  is_off_screen: (game_object) ->
+    x_wiggle = if game_object.radius
+      game_object.radius * 2
+    else
+      game_object.max_x - game_object.min_x
+
+    y_wiggle = if game_object.radius
+      game_object.radius * 2
+    else
+      game_object.max_y - game_object.min_y
+
+    game_object.x + x_wiggle > @world_width || game_object.x - x_wiggle < 0 || game_object.y - y_wiggle < 0 || game_object.y + y_wiggle > @world_height
+
 @Ai.prototype[JERK] = (jerk, jerk_body) ->
   return if jerk.invuln_ticks
   dx =  @player.x - jerk.x
@@ -34,7 +53,7 @@ class @Ai
   angle_diff = _.normalize_angle(jerk_angle - attack_angle)
   #_.log "dx : #{dx}, dy : #{dy}, Attack angle : #{attack_angle},
   #  angle delta : #{angle_diff}" if @num_update_ticks % 500 == 1
-  is_off_screen = jerk.x > @world_width || jerk.x < 0 || jerk.y < 0 || jerk.y > @world_height
+  is_off_screen = @is_off_screen(jerk)
   if jerk.current_charge_start
     @use_engine(jerk, jerk_body, Math.max(0.07, @game_object_settings.jerk_base_engine_power * 3))
     if _.now() - jerk.current_charge_start > @game_object_settings.jerk_charge_duration
@@ -65,7 +84,7 @@ class @Ai
   attack_angle = _.normalize_angle(Math.atan2(dy, dx))
   bub_angle = bub.angle
   angle_diff = _.normalize_angle(bub_angle - attack_angle)
-  is_off_screen = bub.x > @world_width || bub.x < 0 || bub.y < 0 || bub.y > @world_height
+  is_off_screen = @is_off_screen(bub)
 
   if is_off_screen
     @use_engine(bub, bub_body, @game_object_settings.bub_base_engine_power * 2)
@@ -96,10 +115,21 @@ class @Ai
       else
         true
     , aabb
+    if @is_off_screen(sob)
+      @use_engine(sob, sob_body, 0.4)
+    else
+      player_dx = @player.x - sob.x
+      player_dy = @player.y - sob.y
+      dist = Math.sqrt(player_dx * player_dx + player_dy * player_dy)
 
-    @use_engine(sob, sob_body, 0.2)
-    #sob_body.ApplyImpulse(new b2Vec2(_.random(-1, 1), _.random(-1, 1)), sob_body.GetWorldCenter())
-    #sob_body.ApplyImpulse(new b2Vec2(3,0), sob_body.GetWorldCenter())
+      x_force = 0.075 * (player_dx / dist)
+      y_force = 0.075 * (player_dy / dist)
+      sob_body.ApplyImpulse(new b2Vec2(x_force, y_force), sob_body.GetWorldCenter())
+      if dist < 3
+        sob_body.ApplyTorque(4)
+
+    #
+
     # the above thing is synchronous, so it is ok to do this:
     for guid, game_object of sob.nearby_game_objects
       body = sob.nearby_game_object_bodies[guid]
