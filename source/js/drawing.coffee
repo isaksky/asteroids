@@ -289,14 +289,19 @@ drawing =
     powerup.pulse_tick %= POWERUP_PULSE_TICKS
 
   draw_orb : (ctx, o) ->
-    display_radius = SCALE * o.radius
+    display_radius = SCALE * o.radius * 1.5
     ctx.save()
     ctx.beginPath()
     x = o.x * SCALE
     y = o.y * SCALE
+
+    gradient = ctx.createRadialGradient(x, y, 0, x, y, display_radius)
+    gradient.addColorStop(0.25, "rgba(0, 0, 255, 0)")
+    gradient.addColorStop(1, "rgba(230, 230, 255, 1)")
+
+    ctx.fillStyle = gradient
     ctx.arc(x, y, display_radius, 0, TWO_PI, true)
     ctx.closePath()
-    ctx.fillStyle = "rgba(27, 128, 224, 0.9)"
     ctx.fill()
     ctx.restore()
 
