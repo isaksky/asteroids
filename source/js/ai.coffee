@@ -158,8 +158,6 @@ class @Ai
       shard_body = physics_helper.get_physics_setup_fn(shard)(shard, @world, false)
       @game_objects[shard.guid] = shard
 
-      shard_body.SetLinearVelocity(orb_body.GetLinearVelocity())
       pow = 0.12
-      #shard_body.SetAngularVelocity(orb_body.GetAngularVelocity() / 10)
       shard_body.ApplyImpulse(new b2Vec2(Math.cos(shard_angle) * pow,
         Math.sin(shard_angle) * pow), shard_body.GetWorldCenter())
