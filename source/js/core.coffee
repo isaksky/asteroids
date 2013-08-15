@@ -99,9 +99,12 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
               y = @random_y_coord()
               attempts += 1
           _.log "Reached max placement attempts" if attempts == MAX_PLACEMENT_ATTEMPTS
-          game_object = create_game_object[object_type](x, y, invuln_ticks)
-          @game_objects[game_object.guid] = game_object
-          physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
+          try
+            game_object = create_game_object[object_type](x, y, invuln_ticks)
+            @game_objects[game_object.guid] = game_object
+            physics_helper.get_physics_setup_fn(game_object)(game_object, @world)
+          catch err
+            _.log "Failed to spawn a #{ENUM_NAME_BY_TYPE[object_type]}! error: #{err}" # seems that some random asteroids' polygons cannot be seperated, even if the initial polygon passes Box2DSeparator validation
     else if levels[@level_idx + 1]?
       _.log "Advancing levels!"
       JERK_AIM_TIME = Math.ceil(JERK_AIM_TIME * 0.8)
