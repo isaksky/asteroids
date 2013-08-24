@@ -29,6 +29,7 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
   # Gotta turn things way down for people not using Chrome
   max_pixels :  if "Google Inc." == window.navigator?.vendor then 1280 * 800 else 800 * 600
   setup : ->
+    @touch_enabled = Modernizr.touch
     @fps_stats = new RollingStatistics
     @waves_spawned_by_level = {}
     @score = @num_update_ticks = 0
@@ -267,6 +268,31 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
         new b2Vec2(Math.cos(@player_body.GetAngle() + HALF_PI) * BASE_SHIP_ENGINE_POWER, Math.sin(@player_body.GetAngle() + HALF_PI) * BASE_SHIP_ENGINE_POWER),
         @player_body.GetWorldCenter())
 
+    @prev_touch_x = @prev_touch_y = null
+    if @touches?.length
+      #touch instanceof MouseEvent
+      touch = _.min @touches, (t) => Math.abs((t.x / SCALE) - @player.x + (t.y / SCALE) - @player.y)
+      # @save()
+      if touch && touch.x && touch.y && @touch_enabled
+        @prev_touch_x = x = touch.x / SCALE
+        @prev_touch_y = y = touch.y / SCALE
+        dx = x - @player.x
+        dy = y - @player.y
+        dist = Math.sqrt(dx * dx + dy * dy)
+        desired_angle = _.normalize_angle(Math.atan2(dy, dx))
+        angle_diff = _.normalize_angle(@player.angle - desired_angle)
+        future_player_angle = @player.angle + @player_body.GetAngularVelocity() / 3.0
+        torque = (if _.is_clockwise_of(desired_angle, future_player_angle) then 1 else -1) * Math.abs(angle_diff) * 0.5
+        @player_body.ApplyTorque(torque)
+
+        if dist > 1.75
+          full_power_dist = @world_width / 3 # if touch is half of game away from player, apply full power
+          @gas(@player, @player_body, false, BASE_SHIP_ENGINE_POWER * (dist / full_power_dist) * 0.4)
+
+        if @touches.length > 1
+          @shoot_orb()
+
+
   toggle_show_fps: ->
     return if @toggle_fps_last_toggled_at && _.now() - @toggle_fps_last_toggled_at < 200
     @show_fps = !@show_fps
@@ -492,6 +518,15 @@ STEP_RATE = 1 / 60 # static step rate. Box2D likes that.
     @draw_score()
     @draw_level_intro()
     @draw_fps() if @show_fps
+
+    if @prev_touch_x && @prev_touch_y
+      @save()
+      @strokeStyle = 'red'
+      @beginPath()
+      @arc(@prev_touch_x * SCALE, @prev_touch_y * SCALE, 15, 0, TWO_PI, true)
+
+      @stroke()
+      @restore()
 
     if @finished
       @textAlign = "center"

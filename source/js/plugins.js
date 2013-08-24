@@ -3,6 +3,7 @@
 //= require vendor/Box2dWeb-2.1.a.3.min.js
 //= require vendor/zepto.min.js
 //= require vendor/sketch.js
+//= require vendor/modernizr-2.6.1.min.js
 
 
 // Avoid `console` errors in browsers that lack a console.
